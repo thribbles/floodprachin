@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.vercel/
+.env*
+!.env.example
+supabase/.temp/
+*.log
+
+.agents/
+skills-lock.json

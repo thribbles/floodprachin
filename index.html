@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="th" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#10171e" />
+  <script>
+    const savedTheme = localStorage.getItem('prachin-theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.dataset.theme = savedTheme || (prefersDark ? 'dark' : 'dark');
+  </script>
+  <title>น้ำท่วมปราจีน69. — แจ้งเหตุและช่วยเหลือ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="topbar">
+    <div class="brand-group">
+      <a class="brand" href="#map-view" aria-label="น้ำท่วมปราจีน69.">
+        <span class="brand-icon">
+          <svg class="fish-logo" viewBox="0 0 32 32" width="30" height="30" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="โลโก้ปลา">
+            <path d="M10 16C11.5 10.5 17 7 22.5 7C27.5 7 30 11 31 16C30 21 27.5 25 22.5 25C17 25 11.5 21.5 10 16Z" fill="url(#vue-grad)" stroke="#42b883" stroke-width="2"/>
+            <path d="M10 16L2 10.5V21.5L10 16Z" fill="#42b883" stroke="#42b883" stroke-width="1.5" stroke-linejoin="round"/>
+            <circle cx="25" cy="13" r="1.8" fill="#ffffff"/>
+            <circle cx="25.5" cy="13" r="0.9" fill="#1b2632"/>
+            <path d="M19 12C20.5 14 20.5 18 19 20" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="vue-grad" x1="10" y1="7" x2="31" y2="25" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#42b883"/>
+                <stop offset="1" stop-color="#35495e"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </span>
+        <div class="brand-text">
+          <h1>น้ำท่วมปราจีน69<span class="brand-dot" style="color:#42b883;">.</span></h1>
+          <span class="live-status">
+            <span class="live-dot pulse"></span>
+            <span id="sync-subtitle">อัปเดตสด · จังหวัดปราจีนบุรี</span>
+          </span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Mobile Tab Switcher -->
+    <div class="mobile-tabs" role="tablist">
+      <button type="button" class="mobile-tab active" id="tab-map-btn" role="tab" aria-selected="true">
+        <span>🗺️</span> แผนที่
+      </button>
+      <button type="button" class="mobile-tab" id="tab-list-btn" role="tab" aria-selected="false">
+        <span>📋</span> รายการ <span id="mobile-badge" class="count-badge">0</span>
+      </button>
+    </div>
+
+    <!-- Header Tools -->
+    <div class="header-tools">
+      <div class="weather-pill" id="weather-pill" title="สภาพอากาศปัจจุบัน จ.ปราจีนบุรี">
+        <span id="weather-icon">☁️</span>
+        <span id="weather-summary">กำลังโหลดอากาศ…</span>
+      </div>
+
+      <div class="clock-badge" id="clock">--:--</div>
+
+      <button type="button" id="theme-toggle" class="icon-button" aria-label="เปลี่ยนโหมดสี (สว่าง/มืด)" title="เปลี่ยนโหมดสี">
+        <span class="theme-icon">☾</span>
+      </button>
+
+      <button type="button" id="staff-login-btn" class="staff-toggle-button">
+        <span class="staff-icon">🛡️</span>
+        <span id="staff-btn-label">เจ้าหน้าที่</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Staff Control Ribbon (Hidden by default, shown when staff logged in) -->
+  <aside id="staff-ribbon" class="staff-ribbon" hidden>
+    <div class="staff-info">
+      <span class="badge badge-staff">เจ้าหน้าที่</span>
+      <span id="staff-role-text">กำลังตรวจสอบสิทธิ์…</span>
+    </div>
+    <div class="staff-ribbon-actions">
+      <button type="button" id="staff-refresh-btn" class="ribbon-btn">🔄 รีเฟรชข้อมูล</button>
+      <button type="button" id="staff-logout-btn" class="ribbon-btn danger">ออกจากระบบ</button>
+    </div>
+  </aside>
+
+  <!-- Main 2-Column Dashboard Layout -->
+  <main class="dashboard-layout" id="dashboard-layout">
+    <!-- Left Sidebar: Feed & Reports List -->
+    <aside class="feed-sidebar" id="feed-sidebar">
+      <div class="feed-header">
+        <div class="feed-title-row">
+          <h2>รายงานเหตุการณ์</h2>
+          <span class="feed-counter" id="feed-count-total">0 รายการ</span>
+        </div>
+
+        <!-- Filter Chips (Color-coded: Red, Blue, Green) -->
+        <div class="filter-bar" role="tablist" aria-label="ตัวกรองรายงาน">
+          <button type="button" class="filter-chip active" data-filter="all">
+            ทั้งหมด <span class="chip-num" id="filter-all-num">0</span>
+          </button>
+          <button type="button" class="filter-chip chip-urgent" data-filter="help">
+            <span class="dot-urgent"></span> ขอความช่วยเหลือ <span class="chip-num" id="filter-help-num">0</span>
+          </button>
+          <button type="button" class="filter-chip chip-report" data-filter="flood">
+            <span class="dot-report"></span> รายงานน้ำท่วม <span class="chip-num" id="filter-flood-num">0</span>
+          </button>
+          <button type="button" class="filter-chip chip-support" data-filter="assistance">
+            <span class="dot-support"></span> จุดช่วยเหลือ <span class="chip-num" id="filter-support-num">0</span>
+          </button>
+          <button type="button" class="filter-chip chip-done" data-filter="done">
+            <span class="dot-done"></span> ช่วยแล้ว <span class="chip-num" id="filter-done-num">0</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Feed List Container -->
+      <div class="feed-list" id="activity-list" tabindex="0" aria-label="รายการเหตุการณ์">
+        <!-- Activity items will be dynamically injected here -->
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" id="empty-state" hidden>
+        <span class="empty-icon">📍</span>
+        <strong>ยังไม่มีข้อมูลในหมวดนี้</strong>
+        <p>คุณสามารถกดปุ่ม "ขอความช่วยเหลือ" หรือ "รายงานสถานการณ์" ด้านล่างเพื่อแจ้งเหตุได้ทันที</p>
+      </div>
+    </aside>
+
+    <!-- Right Column: Interactive Map -->
+    <section class="map-wrapper" id="map-section">
+      <div id="map" class="map-canvas" aria-label="แผนที่น้ำท่วมปราจีน69."></div>
+
+      <!-- Floating Stats Overview Overlay (Clickable to Filter) -->
+      <div class="map-stats-overlay" id="stats-overlay">
+        <div class="stats-banner-title">
+          <span>สรุปสถานการณ์ จ.ปราจีนบุรี</span>
+          <span class="stats-live-time" id="stats-time">อัปเดตล่าสุด</span>
+        </div>
+        <div class="stats-metrics-grid">
+          <div class="stat-metric metric-urgent" data-stat-filter="help" title="ดูเฉพาะผู้ประสบภัยที่รอความช่วยเหลือ">
+            <strong id="stat-urgent">0</strong>
+            <span>รอความช่วยเหลือ</span>
+          </div>
+          <div class="stat-metric metric-report" data-stat-filter="flood" title="ดูเฉพาะรายงานสถานการณ์น้ำท่วม">
+            <strong id="stat-flood">0</strong>
+            <span>รายงานน้ำท่วม</span>
+          </div>
+          <div class="stat-metric metric-support" data-stat-filter="assistance" title="ดูเฉพาะจุดช่วยเหลือและศูนย์พักพิง">
+            <strong id="stat-support">0</strong>
+            <span>จุดช่วยเหลือ</span>
+          </div>
+          <div class="stat-metric metric-done" data-stat-filter="done" title="ดูเฉพาะเหตุการณ์ที่ช่วยเหลือแล้ว">
+            <strong id="stat-done">0</strong>
+            <span>ช่วยเหลือแล้ว</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map Floating Utility Controls -->
+      <div class="map-controls-floating">
+        <button type="button" id="locate-me-btn" class="map-tool-btn" title="ระบุตำแหน่งของฉัน (GPS)">
+          <span class="tool-icon">📍</span>
+          <span class="tool-label">ตำแหน่งของฉัน</span>
+        </button>
+        <button type="button" id="gistda-layer-btn" class="map-tool-btn" title="เปิด/ปิด ชั้นข้อมูลน้ำท่วม GISTDA">
+          <span class="tool-icon">🛰️</span>
+          <span class="tool-label">ดาวเทียม GISTDA</span>
+          <span class="status-indicator" id="gistda-status-dot"></span>
+        </button>
+      </div>
+
+      <!-- Map Legend (Color-Coded) -->
+      <div class="map-legend-card">
+        <span class="legend-item"><i class="legend-dot dot-urgent"></i> ขอความช่วยเหลือ</span>
+        <span class="legend-item"><i class="legend-dot dot-report"></i> รายงานน้ำท่วม</span>
+        <span class="legend-item"><i class="legend-dot dot-support"></i> จุดช่วยเหลือ</span>
+        <span class="legend-item"><i class="legend-dot dot-done"></i> ช่วยแล้ว</span>
+      </div>
+
+      <!-- 3 Colored Action Buttons: ขอความช่วยเหลือ (แดง), รายงานสถานการณ์ (น้ำเงิน), จุดช่วยเหลือ (เขียว) -->
+      <div class="fab-container">
+        <button type="button" class="fab-btn fab-btn-urgent" data-open-type="help" title="ขอความช่วยเหลือด่วน">
+          <span class="fab-icon">🆘</span>
+          <span class="fab-text">ขอความช่วยเหลือ</span>
+          <span class="fab-badge" id="fab-urgent-count" hidden>0</span>
+        </button>
+        <button type="button" class="fab-btn fab-btn-report" data-open-type="flood" title="รายงานสถานการณ์น้ำท่วม">
+          <span class="fab-icon">🌊</span>
+          <span class="fab-text">รายงานน้ำท่วม</span>
+        </button>
+        <button type="button" class="fab-btn fab-btn-support" data-open-type="assistance" title="เพิ่มจุดช่วยเหลือ / ศูนย์พักพิง">
+          <span class="fab-icon">⌂</span>
+          <span class="fab-text">จุดช่วยเหลือ</span>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== SIMPLE REPORTING MODAL ==================== -->
+  <dialog id="report-modal" class="app-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-eyebrow">PRACHINBURI EMERGENCY REPORT</span>
+          <h3>แจ้งเหตุ / ขอความช่วยเหลือ</h3>
+          <p class="modal-subtitle">ข้อมูลจะแสดงบนแผนที่เพื่อให้ชุมชนและเจ้าหน้าที่เข้าช่วยเหลือได้ทันที</p>
+        </div>
+        <button type="button" id="report-modal-close" class="modal-close-btn" aria-label="ปิด">✕</button>
+      </div>
+
+      <form id="simple-report-form" class="report-form" novalidate>
+        <!-- Step 1: ประเภทเหตุการณ์ (ปุ่มใหญ่ แตะง่าย) -->
+        <div class="form-section">
+          <label class="section-label">1. เลือกประเภทเหตุการณ์ <span class="req">*</span></label>
+          <div class="type-cards-grid">
+            <button type="button" class="type-card selected" data-type="help">
+              <span class="type-card-icon">🆘</span>
+              <div class="type-card-info">
+                <strong>ขอความช่วยเหลือ</strong>
+                <small>ติดน้ำท่วม, ขาดอาหาร/น้ำ, คนป่วย/สูงอายุ</small>
+              </div>
+            </button>
+            <button type="button" class="type-card" data-type="flood">
+              <span class="type-card-icon">🌊</span>
+              <div class="type-card-info">
+                <strong>รายงานน้ำท่วม</strong>
+                <small>ระดับน้ำสูง, ถนนขาด, น้ำท่วมขัง</small>
+              </div>
+            </button>
+            <button type="button" class="type-card" data-type="assistance">
+              <span class="type-card-icon">⌂</span>
+              <div class="type-card-info">
+                <strong>จุดช่วยเหลือ / พักพิง</strong>
+                <small>ศูนย์พักพิง, แจกถุงยังชีพ, บริการเรือ</small>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: ตำแหน่งเหตุการณ์ (GPS / แผนที่) -->
+        <div class="form-section">
+          <label class="section-label">2. ตำแหน่งเหตุการณ์ใน จ.ปราจีนบุรี <span class="req">*</span></label>
+          <div class="location-picker-box">
+            <div class="location-status-row">
+              <span class="loc-pin-icon" id="loc-pin-icon">📍</span>
+              <div class="loc-details">
+                <span id="loc-status-text" class="loc-status-text">ยังไม่ได้เลือกตำแหน่ง</span>
+                <span id="loc-coords-text" class="loc-coords-text">กรุณากดปุ่ม GPS หรือแตะบนแผนที่</span>
+              </div>
+            </div>
+            <div class="location-actions">
+              <button type="button" id="modal-gps-btn" class="action-btn-gps">
+                <span>📍 ใช้ตำแหน่ง GPS ปัจจุบัน</span>
+              </button>
+              <button type="button" id="modal-pick-map-btn" class="action-btn-secondary">
+                <span>🗺️ แตะเลือกบนแผนที่</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Fields for Assistance Points (Hidden by default) -->
+        <div id="assistance-fields" class="form-section assistance-extra-fields" hidden>
+          <label class="field-label" for="point-name">ชื่อจุดช่วยเหลือ / ศูนย์พักพิง <span class="req">*</span></label>
+          <input type="text" id="point-name" class="text-input" placeholder="เช่น ศูนย์พักพิงวัดโบสถ์, จุดแจกเสบียงบ้านสร้าง" maxlength="120">
+
+          <div class="input-grid">
+            <div>
+              <label class="field-label" for="point-category">ประเภทบริการ</label>
+              <select id="point-category" class="select-input">
+                <option value="shelter">ที่พักพิง / ปลอดภัย</option>
+                <option value="food">อาหารและน้ำดื่ม</option>
+                <option value="medical">การแพทย์ / ยารักษาโรค</option>
+                <option value="transport">เรือ / ยานพาหนะรับส่ง</option>
+                <option value="other">อื่น ๆ</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="point-status">สถานะสิ่งของ</label>
+              <select id="point-status" class="select-input">
+                <option value="available">มีของ / พร้อมรับรอง</option>
+                <option value="unavailable">พักชั่วคราว</option>
+                <option value="depleted">ของหมดแล้ว</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: รายละเอียดเหตุการณ์ & รูปภาพ -->
+        <div class="form-section">
+          <label class="section-label" for="report-desc">3. รายละเอียดเหตุการณ์ <span class="req">*</span></label>
+          <textarea id="report-desc" class="textarea-input" rows="3" maxlength="300" placeholder="เช่น น้ำท่วมสูงระดับเอว รถเล็กไม่สามารถผ่านได้ มีผู้สูงอายุ 2 คนติดอยู่ในบ้าน"></textarea>
+
+          <div class="photo-upload-wrap">
+            <label class="photo-upload-label" for="report-photo-input">
+              <span class="upload-icon">📷</span>
+              <span class="upload-text">ถ่ายภาพ หรือเลือกรูปภาพประกอบ (ถ้ามี)</span>
+              <span class="upload-hint">ไฟล์ JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB</span>
+            </label>
+            <input type="file" id="report-photo-input" class="hidden-file-input" accept="image/jpeg,image/png,image/webp">
+            <div id="photo-preview-wrap" class="photo-preview-wrap" hidden>
+              <img id="photo-preview-img" src="" alt="ตัวอย่างรูปภาพ" class="photo-preview-img">
+              <button type="button" id="remove-photo-btn" class="remove-photo-btn" title="ยกเลิกรูปภาพ">✕</button>
+            </div>
+          </div>
+
+          <div class="input-grid" id="report-extra-grid">
+            <div>
+              <label class="field-label" for="report-contact">เบอร์ติดต่อกลับ <small>(เจ้าหน้าที่โทรประสานงาน)</small></label>
+              <input type="tel" id="report-contact" class="text-input" placeholder="0XX-XXX-XXXX" maxlength="20" inputmode="tel">
+            </div>
+            <div>
+              <label class="field-label" for="report-people">จำนวนผู้ประสบภัย <small>(คน)</small></label>
+              <input type="number" id="report-people" class="text-input" min="1" max="999" placeholder="ระบุจำนวนคน">
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="modal-footer">
+          <button type="submit" id="submit-report-btn" class="btn-primary-submit">
+            <span class="submit-spinner" id="submit-spinner" hidden></span>
+            <span id="submit-btn-text">🚀 ส่งข้อมูลทันที</span>
+          </button>
+          <p class="privacy-notice">
+            🔒 พิกัดต้องอยู่ในจังหวัดปราจีนบุรีเท่านั้น · ข้อมูลโทรศัพท์จะเปิดเผยเฉพาะเจ้าหน้าที่กู้ภัย
+          </p>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- ==================== EVENT DETAIL MODAL ==================== -->
+  <dialog id="event-dialog" class="app-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-eyebrow" id="event-eyebrow">รายละเอียดเหตุการณ์</span>
+          <h3 id="event-title">เหตุการณ์ในพื้นที่</h3>
+          <span id="event-status-badge" class="badge">รอความช่วยเหลือ</span>
+        </div>
+        <button type="button" id="event-close-btn" class="modal-close-btn" aria-label="ปิด">✕</button>
+      </div>
+
+      <div class="event-body">
+        <div id="event-image-container" class="event-image-container" hidden>
+          <img id="event-img" src="" alt="ภาพถ่ายสถานที่เกิดเหตุ" class="event-full-img">
+        </div>
+
+        <div class="event-desc-box">
+          <p id="event-description-text"></p>
+        </div>
+
+        <div class="event-meta-grid" id="event-meta-grid">
+          <!-- Meta items injected dynamically -->
+        </div>
+
+        <!-- Quick Call Link if available -->
+        <div id="event-call-row" class="event-call-row" hidden>
+          <a id="event-phone-link" href="#" class="call-action-btn">
+            <span>📞 โทรติดต่อผู้ประสบภัย: </span>
+            <strong id="event-phone-display"></strong>
+          </a>
+        </div>
+
+        <!-- Staff / Owner Management Section -->
+        <div id="event-admin-section" class="event-admin-section" hidden>
+          <h4>เครื่องมือจัดการสถานะ</h4>
+
+          <!-- Report Controls -->
+          <div id="admin-report-controls" class="admin-controls-group">
+            <div class="input-grid">
+              <div>
+                <label class="field-label" for="admin-status-select">สถานะ</label>
+                <select id="admin-status-select" class="select-input">
+                  <option value="pending">รอความช่วยเหลือ</option>
+                  <option value="done">ช่วยเหลือเรียบร้อยแล้ว</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label" for="admin-helped-by">ผู้ช่วยเหลือ / หน่วยงาน</label>
+                <input type="text" id="admin-helped-by" class="text-input" placeholder="เช่น กู้ภัยสว่างบำเพ็ญ, เทศบาล">
+              </div>
+            </div>
+            <div class="admin-btn-row">
+              <button type="button" id="admin-save-status-btn" class="btn-success">✓ บันทึกสถานะ</button>
+              <button type="button" id="admin-delete-report-btn" class="btn-danger">🗑️ ลบรายงานนี้</button>
+            </div>
+          </div>
+
+          <!-- Assistance Point Controls -->
+          <div id="admin-support-controls" class="admin-controls-group" hidden>
+            <div class="input-grid">
+              <div>
+                <label class="field-label" for="admin-support-name">ชื่อจุดช่วยเหลือ</label>
+                <input type="text" id="admin-support-name" class="text-input">
+              </div>
+              <div>
+                <label class="field-label" for="admin-support-status">สถานะสิ่งของ</label>
+                <select id="admin-support-status" class="select-input">
+                  <option value="available">มีของ / พร้อมรับรอง</option>
+                  <option value="unavailable">ไม่มีของ / ปิดชั่วคราว</option>
+                  <option value="depleted">ของหมดแล้ว</option>
+                </select>
+              </div>
+            </div>
+            <div class="admin-btn-row">
+              <button type="button" id="admin-save-support-btn" class="btn-success">✓ บันทึกจุดช่วยเหลือ</button>
+              <button type="button" id="admin-delete-support-btn" class="btn-danger">🗑️ ลบจุดช่วยเหลือนี้</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="event-view-map-btn" class="btn-view-map">
+          <span>📍 ดูตำแหน่งบนแผนที่</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ==================== STAFF LOGIN MODAL ==================== -->
+  <dialog id="staff-modal" class="app-modal">
+    <div class="modal-card modal-sm">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-eyebrow">STAFF AUTHENTICATION</span>
+          <h3>เข้าสู่ระบบเจ้าหน้าที่</h3>
+          <p class="modal-subtitle">สำหรับเจ้าหน้าที่กู้ภัยและผู้ดูแลระบบ จ.ปราจีนบุรี</p>
+        </div>
+        <button type="button" id="staff-modal-close" class="modal-close-btn" aria-label="ปิด">✕</button>
+      </div>
+
+      <form id="staff-login-form" class="report-form">
+        <div class="form-section">
+          <label class="field-label" for="staff-email">อีเมล</label>
+          <input type="email" id="staff-email" class="text-input" placeholder="rescuer@example.com" autocomplete="username" required>
+
+          <label class="field-label" for="staff-password">รหัสผ่าน</label>
+          <input type="password" id="staff-password" class="text-input" placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" id="staff-submit-btn" class="btn-primary-submit">
+            <span>เข้าสู่ระบบ</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Global Toast Notification -->
+  <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
+
+  <!-- Leaflet & App Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

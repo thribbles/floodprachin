@@ -1,0 +1,6 @@
+.env*
+supabase/
+*.test.cjs
+README.md
+node_modules/
+*.log

@@ -1,0 +1,18 @@
+{
+  "name": "phuengpha-prachinburi-flood",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 8000 --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 8000 --strictPort",
+    "test": "node --test *.test.cjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2"
+  },
+  "devDependencies": {
+    "pg": "8.23.0",
+    "vite": "8.3.1"
+  }
+}
