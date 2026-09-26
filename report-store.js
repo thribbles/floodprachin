@@ -31,10 +31,20 @@ export function isStaffUser() {
 
 async function ensureUser() {
   if (currentUser) return currentUser;
-  if (!signingIn) signingIn = database.auth.signInAnonymously().finally(() => { signingIn = null; });
-  const { data, error } = await signingIn;
-  if (error) throw error;
-  currentUser = data.user;
+  if (!signingIn) {
+    signingIn = database.auth.signInAnonymously().catch(err => {
+      console.warn('Anonymous sign-in not enabled in Supabase, proceeding as guest:', err?.message);
+      return { data: { user: null }, error: null };
+    }).finally(() => {
+      signingIn = null;
+    });
+  }
+  try {
+    const { data } = await signingIn;
+    currentUser = data?.user || null;
+  } catch {
+    currentUser = null;
+  }
   return currentUser;
 }
 
@@ -144,7 +154,8 @@ export async function createAssistancePoint(point) {
   if (database) await ensureUser();
   const { data, error } = await database.from('assistance_points').insert({
     name: point.name, category: point.category, description: point.description, status: point.status || 'available',
-    latitude: point.lat, longitude: point.lng, attachment_path: point.attachmentPath || null
+    latitude: point.lat, longitude: point.lng, attachment_path: point.attachmentPath || null,
+    owner_id: currentUser?.id || null
   }).select('id').single();
   if (error) throw error;
   return data.id;
