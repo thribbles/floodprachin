@@ -113,16 +113,25 @@ export async function updateReport(report, changes) {
     Object.assign(report, changes);
     return;
   }
-  const allowed = new Set(['type','description','people','status','helpedBy','attachmentPath']);
+  const allowed = new Set(['type', 'description', 'people', 'status', 'helpedBy', 'attachmentPath']);
   const invalidKeys = Object.keys(changes).filter(k => !allowed.has(k));
   if (invalidKeys.length > 0) {
     throw new Error(`ไม่สามารถอัปเดตฟิลด์ต่อไปนี้: ${invalidKeys.join(', ')}`);
   }
-  const filteredChanges = Object.fromEntries(Object.entries(changes).filter(([k]) => allowed.has(k)));
-  const { data, error } = await database.from('flood_reports').update(filteredChanges).eq('id', report.id).select('id');
+  const payload = {};
+  if ('type' in changes) payload.type = changes.type;
+  if ('description' in changes) payload.description = changes.description;
+  if ('people' in changes) payload.people = changes.people;
+  if ('status' in changes) payload.status = changes.status;
+  if ('helpedBy' in changes) payload.helped_by = changes.helpedBy ? (changes.helpedBy.trim() || null) : null;
+  if ('attachmentPath' in changes) payload.attachment_path = changes.attachmentPath || null;
+
+  const { data, error } = await database.from('flood_reports').update(payload).eq('id', report.id).select('id');
   if (error) throw error;
   if (!data.length) throw new Error('แก้ไขไม่สำเร็จ หรือบัญชีนี้ไม่มีสิทธิ์แก้ไขรายงาน');
+  Object.assign(report, changes);
 }
+
 
 export async function deleteReport(report) {
   if (!database) {
@@ -166,10 +175,18 @@ export async function updateAssistancePoint(point, changes) {
     Object.assign(point, changes);
     return;
   }
-  const { data, error } = await database.from('assistance_points').update(changes).eq('id', point.id).select('id');
+  const payload = {};
+  if ('name' in changes) payload.name = changes.name;
+  if ('category' in changes) payload.category = changes.category;
+  if ('status' in changes) payload.status = changes.status;
+  if ('description' in changes) payload.description = changes.description;
+  if ('attachmentPath' in changes) payload.attachment_path = changes.attachmentPath || null;
+  const { data, error } = await database.from('assistance_points').update(payload).eq('id', point.id).select('id');
   if (error) throw error;
   if (!data.length) throw new Error('แก้ไขไม่สำเร็จ หรือบัญชีนี้ไม่มีสิทธิ์แก้ไขจุดช่วยเหลือ');
+  Object.assign(point, changes);
 }
+
 
 export async function deleteAssistancePoint(point) {
   if (!database) {

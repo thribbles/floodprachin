@@ -109,6 +109,8 @@ const markersMap = new Map();
 
 let gistdaFloodLayer = null;
 let gistdaFloodLayerEnabled = false;
+let gistdaLoading = false;
+
 
 // --- Load Prachinburi GeoJSON Boundary ---
 fetch(new URL('./province-prachinburi.geojson', import.meta.url))
@@ -1137,31 +1139,98 @@ document.getElementById('gistda-layer-btn').addEventListener('click', () => {
   setGistdaFloodLayer(!gistdaFloodLayerEnabled);
 });
 
-function setGistdaFloodLayer(enabled) {
+async function setGistdaFloodLayer(enabled) {
   const dot = document.getElementById('gistda-status-dot');
   const activeKey = getGistdaApiKey();
   if (!activeKey) {
     toast('ยังไม่ได้ระบุ GISTDA API key');
     return;
   }
-  if (!gistdaFloodLayer) {
-    const tileUrl = `https://api-gateway.gistda.or.th/api/2.0/resources/maps/flood/1day/tms/{z}/{x}/{y}?api_key=${encodeURIComponent(activeKey)}`;
-    gistdaFloodLayer = L.tileLayer(tileUrl, {
-      opacity: 0.65,
-      maxZoom: 18,
-      attribution: 'ข้อมูลน้ำท่วม © GISTDA'
-    });
-    gistdaFloodLayer.on('tileerror', () => {
-      dot.classList.remove('active');
-      toast('ไม่สามารถโหลดชั้นข้อมูล GISTDA ได้');
-    });
-  }
 
+  if (gistdaLoading) return;
   gistdaFloodLayerEnabled = enabled;
+
   if (enabled) {
-    gistdaFloodLayer.addTo(map);
     dot.classList.add('active');
-    toast('เปิดชั้นข้อมูลน้ำท่วม GISTDA แล้ว');
+
+    if (!gistdaFloodLayer) {
+      gistdaLoading = true;
+      toast('🛰️ กำลังดึงข้อมูลพื้นที่น้ำท่วมจากดาวเทียม GISTDA...');
+      try {
+        let features = [];
+        let periodName = '3 วันล่าสุด';
+
+        // Try 3days first for Prachinburi (pv_idn=25)
+        const res3 = await fetch(`https://api-gateway.gistda.or.th/api/2.0/resources/features/flood/3days?api_key=${encodeURIComponent(activeKey)}&pv_idn=25&limit=400`);
+        if (res3.ok) {
+          const data3 = await res3.json();
+          if (Array.isArray(data3?.features) && data3.features.length > 0) {
+            features = data3.features;
+          }
+        }
+
+        // Fallback to 7days if 3days has 0 features
+        if (features.length === 0) {
+          periodName = '7 วันล่าสุด';
+          const res7 = await fetch(`https://api-gateway.gistda.or.th/api/2.0/resources/features/flood/7days?api_key=${encodeURIComponent(activeKey)}&pv_idn=25&limit=400`);
+          if (res7.ok) {
+            const data7 = await res7.json();
+            if (Array.isArray(data7?.features) && data7.features.length > 0) {
+              features = data7.features;
+            }
+          }
+        }
+
+        if (features.length === 0) {
+          toast('ไม่พบขอบเขตน้ำท่วมจากดาวเทียมในปราจีนบุรีช่วง 3-7 วันนี้');
+        } else {
+          gistdaFloodLayer = L.geoJSON({ type: 'FeatureCollection', features }, {
+            style: {
+              color: '#0284c7',
+              weight: 1.5,
+              opacity: 0.9,
+              fillColor: '#38bdf8',
+              fillOpacity: 0.45
+            },
+            onEachFeature: (feature, layer) => {
+              const props = feature.properties || {};
+              const amphoe = props.ap_tn || 'จ.ปราจีนบุรี';
+              const tambon = props.tb_tn || '';
+              const areaSqM = Math.round(props.f_area || props.flood_area || 0);
+              const areaRai = (areaSqM / 1600).toFixed(1);
+              const dateStr = props._createdAt ? new Date(props._createdAt).toLocaleDateString('th-TH') : '';
+              layer.bindPopup(`
+                <div class="gistda-popup" style="font-family: inherit; font-size: 13px; line-height: 1.5; min-width: 190px;">
+                  <div style="font-weight: 700; color: #0284c7; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                    🛰️ ขอบเขตน้ำท่วมดาวเทียม
+                  </div>
+                  <div><strong>พื้นที่:</strong> ${amphoe} ${tambon}</div>
+                  <div><strong>ขนาดน้ำท่วม:</strong> ${areaRai} ไร่ (${areaSqM.toLocaleString()} ตร.ม.)</div>
+                  ${dateStr ? `<div><strong>วันที่ดาวเทียม:</strong> ${dateStr}</div>` : ''}
+                  <div style="margin-top: 6px; font-size: 11px; opacity: 0.75; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 4px;">
+                    ข้อมูลดาวเทียม © GISTDA (${periodName})
+                  </div>
+                </div>
+              `);
+            }
+          });
+        }
+      } catch (err) {
+        console.error('GISTDA Layer Error:', err);
+        toast('โหลดข้อมูลดาวเทียมไม่สำเร็จ: ' + (err.message || ''));
+        dot.classList.remove('active');
+        gistdaFloodLayerEnabled = false;
+        gistdaLoading = false;
+        return;
+      } finally {
+        gistdaLoading = false;
+      }
+    }
+
+    if (gistdaFloodLayer) {
+      gistdaFloodLayer.addTo(map);
+      toast('🛰️ แสดงชั้นข้อมูลน้ำท่วม GISTDA เรียบร้อย');
+    }
 
     // Fetch latest flood-check timestamp from GISTDA Dragonfly
     fetch(`https://api-gateway.gistda.or.th/api/2.0/resources/dragonfly/flood-checks?api_key=${encodeURIComponent(activeKey)}`)
@@ -1176,7 +1245,9 @@ function setGistdaFloodLayer(enabled) {
       })
       .catch(() => { });
   } else {
-    map.removeLayer(gistdaFloodLayer);
+    if (gistdaFloodLayer && map.hasLayer(gistdaFloodLayer)) {
+      map.removeLayer(gistdaFloodLayer);
+    }
     dot.classList.remove('active');
     toast('ปิดชั้นข้อมูลน้ำท่วม GISTDA');
   }
@@ -1645,6 +1716,12 @@ document.querySelectorAll('[data-hub-action]').forEach(tile => {
         setMobileView('map');
         setGistdaFloodLayer(true);
         break;
+
+      case 'google-flood':
+        window.open('https://sites.research.google/floods/', '_blank', 'noopener,noreferrer');
+        toast('กำลังเปิด Google Flood Hub ในแท็บใหม่');
+        break;
+
 
       case 'reports-dashboard':
         renderReportsDashboard();
