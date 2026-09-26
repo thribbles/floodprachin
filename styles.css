@@ -54,7 +54,7 @@
   --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.5);
 
   --header-height: 64px;
-  --sidebar-width: 410px;
+  --sidebar-width: 440px;
 }
 
 /* Light Theme Overrides (Vue.js Light Aesthetic) */
@@ -333,7 +333,9 @@ html, body {
    Main 2-Column Dashboard Layout
    ========================================================================== */
 .dashboard-layout {
-  height: calc(100vh - var(--header-height));
+  flex: 1;
+  min-height: 0;
+  height: auto;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   position: relative;
@@ -354,7 +356,7 @@ html, body {
 }
 
 .feed-header {
-  padding: 14px 16px 10px;
+  padding: 12px 14px 10px;
   border-bottom: 1px solid var(--border-subtle);
   background-color: var(--bg-surface);
 }
@@ -363,7 +365,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .feed-title-row h2 {
@@ -381,14 +383,9 @@ html, body {
 /* Filter Chips Bar */
 .filter-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: none;
-}
-
-.filter-bar::-webkit-scrollbar {
-  display: none;
+  padding-bottom: 2px;
 }
 
 .filter-chip {
@@ -396,9 +393,9 @@ html, body {
   border: 1px solid var(--border-subtle);
   color: var(--text-muted);
   border-radius: 20px;
-  padding: 5px 10px;
+  padding: 5px 9px;
   font-family: var(--font-thai);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
