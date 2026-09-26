@@ -54,10 +54,26 @@
       <button type="button" class="mobile-tab" id="tab-list-btn" role="tab" aria-selected="false">
         <span>📋</span> รายการ <span id="mobile-badge" class="count-badge">0</span>
       </button>
+      <button type="button" class="mobile-tab" id="tab-reports-btn" role="tab" aria-selected="false">
+        <span>📊</span> สรุปรายงาน
+      </button>
+      <button type="button" class="mobile-tab" id="tab-links-btn" role="tab" aria-selected="false">
+        <span>🔗</span> เมนูเชื่อมโยง
+      </button>
     </div>
 
     <!-- Header Tools -->
     <div class="header-tools">
+      <button type="button" id="quick-links-hub-btn" class="header-nav-button" title="ศูนย์รวมเมนูและจุดเชื่อมโยงข้อมูล">
+        <span class="nav-btn-icon">🔗</span>
+        <span class="nav-btn-text">เมนูเชื่อมโยง</span>
+      </button>
+
+      <button type="button" id="reports-dashboard-btn" class="header-nav-button" title="ดูศูนย์รายงานและสถิติภาพรวม">
+        <span class="nav-btn-icon">📊</span>
+        <span class="nav-btn-text">รายงานสรุป</span>
+      </button>
+
       <div class="weather-pill" id="weather-pill" title="สภาพอากาศปัจจุบัน จ.ปราจีนบุรี">
         <span id="weather-icon">☁️</span>
         <span id="weather-summary">กำลังโหลดอากาศ…</span>
@@ -98,7 +114,7 @@
           <span class="feed-counter" id="feed-count-total">0 รายการ</span>
         </div>
 
-        <!-- Filter Chips (Color-coded: Red, Blue, Green) -->
+        <!-- Filter Chips (Color-coded: Red, Blue, Green, Yellow, Black/Grey) -->
         <div class="filter-bar" role="tablist" aria-label="ตัวกรองรายงาน">
           <button type="button" class="filter-chip active" data-filter="all">
             ทั้งหมด <span class="chip-num" id="filter-all-num">0</span>
@@ -109,11 +125,14 @@
           <button type="button" class="filter-chip chip-report" data-filter="flood">
             <span class="dot-report"></span> รายงานน้ำท่วม <span class="chip-num" id="filter-flood-num">0</span>
           </button>
+          <button type="button" class="filter-chip chip-sandbag" data-filter="sandbag">
+            <span class="dot-sandbag"></span> รับกระสอบทราย <span class="chip-num" id="filter-sandbag-num">0</span>
+          </button>
           <button type="button" class="filter-chip chip-support" data-filter="assistance">
             <span class="dot-support"></span> จุดช่วยเหลือ <span class="chip-num" id="filter-support-num">0</span>
           </button>
           <button type="button" class="filter-chip chip-done" data-filter="done">
-            <span class="dot-done"></span> ช่วยแล้ว <span class="chip-num" id="filter-done-num">0</span>
+            <span class="dot-done"></span> ช่วยแล้ว/ปิด <span class="chip-num" id="filter-done-num">0</span>
           </button>
         </div>
       </div>
@@ -174,15 +193,17 @@
         </button>
       </div>
 
-      <!-- Map Legend (Color-Coded) -->
+      <!-- Map Legend -->
       <div class="map-legend-card">
         <span class="legend-item"><i class="legend-dot dot-urgent"></i> ขอความช่วยเหลือ</span>
         <span class="legend-item"><i class="legend-dot dot-report"></i> รายงานน้ำท่วม</span>
         <span class="legend-item"><i class="legend-dot dot-support"></i> จุดช่วยเหลือ</span>
+        <span class="legend-item"><i class="legend-dot dot-sandbag"></i> รับกระสอบทราย</span>
+        <span class="legend-item"><i class="legend-dot dot-closed"></i> ปิดบริการแล้ว</span>
         <span class="legend-item"><i class="legend-dot dot-done"></i> ช่วยแล้ว</span>
       </div>
 
-      <!-- 3 Colored Action Buttons: ขอความช่วยเหลือ (แดง), รายงานสถานการณ์ (น้ำเงิน), จุดช่วยเหลือ (เขียว) -->
+      <!-- Action Buttons: ขอความช่วยเหลือ, รายงานน้ำท่วม, รับกระสอบทราย, จุดช่วยเหลือ, เมนูเชื่อมโยง -->
       <div class="fab-container">
         <button type="button" class="fab-btn fab-btn-urgent" data-open-type="help" title="ขอความช่วยเหลือด่วน">
           <span class="fab-icon">🆘</span>
@@ -193,9 +214,17 @@
           <span class="fab-icon">🌊</span>
           <span class="fab-text">รายงานน้ำท่วม</span>
         </button>
+        <button type="button" class="fab-btn fab-btn-sandbag" data-open-type="sandbag" title="แจ้งจุดรับทรายและกระสอบทราย">
+          <span class="fab-icon">🟡</span>
+          <span class="fab-text">รับกระสอบทราย</span>
+        </button>
         <button type="button" class="fab-btn fab-btn-support" data-open-type="assistance" title="เพิ่มจุดช่วยเหลือ / ศูนย์พักพิง">
           <span class="fab-icon">⌂</span>
           <span class="fab-text">จุดช่วยเหลือ</span>
+        </button>
+        <button type="button" class="fab-btn fab-btn-hub" id="fab-quick-links-btn" title="ศูนย์รวมเมนูที่เกี่ยวข้อง & จุดเชื่อมโยง">
+          <span class="fab-icon">🔗</span>
+          <span class="fab-text">เมนูเชื่อมโยง</span>
         </button>
       </div>
     </section>
@@ -214,6 +243,7 @@
       </div>
 
       <form id="simple-report-form" class="report-form" novalidate>
+        <p id="report-form-message" class="form-message" role="alert" tabindex="-1" hidden></p>
         <!-- Step 1: ประเภทเหตุการณ์ (ปุ่มใหญ่ แตะง่าย) -->
         <div class="form-section">
           <label class="section-label">1. เลือกประเภทเหตุการณ์ <span class="req">*</span></label>
@@ -274,6 +304,7 @@
               <label class="field-label" for="point-category">ประเภทบริการ</label>
               <select id="point-category" class="select-input">
                 <option value="shelter">ที่พักพิง / ปลอดภัย</option>
+                <option value="sandbag">🟡 จุดรับทราย / กระสอบทราย</option>
                 <option value="food">อาหารและน้ำดื่ม</option>
                 <option value="medical">การแพทย์ / ยารักษาโรค</option>
                 <option value="transport">เรือ / ยานพาหนะรับส่ง</option>
@@ -370,25 +401,45 @@
 
         <!-- Staff / Owner Management Section -->
         <div id="event-admin-section" class="event-admin-section" hidden>
-          <h4>เครื่องมือจัดการสถานะ</h4>
+          <h4>🛡️ เครื่องมือแก้ไขรายละเอียด (สำหรับเจ้าหน้าที่)</h4>
 
           <!-- Report Controls -->
           <div id="admin-report-controls" class="admin-controls-group">
             <div class="input-grid">
               <div>
-                <label class="field-label" for="admin-status-select">สถานะ</label>
-                <select id="admin-status-select" class="select-input">
-                  <option value="pending">รอความช่วยเหลือ</option>
-                  <option value="done">ช่วยเหลือเรียบร้อยแล้ว</option>
+                <label class="field-label" for="admin-report-type">ประเภทเหตุการณ์</label>
+                <select id="admin-report-type" class="select-input">
+                  <option value="help">🆘 ขอความช่วยเหลือ (แดง)</option>
+                  <option value="flood">🌊 รายงานน้ำท่วม (น้ำเงิน)</option>
                 </select>
               </div>
               <div>
-                <label class="field-label" for="admin-helped-by">ผู้ช่วยเหลือ / หน่วยงาน</label>
+                <label class="field-label" for="admin-status-select">สถานะการช่วยเหลือ</label>
+                <select id="admin-status-select" class="select-input">
+                  <option value="pending">รอความช่วยเหลือ</option>
+                  <option value="done">✓ ช่วยเหลือเรียบร้อยแล้ว</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="input-grid">
+              <div>
+                <label class="field-label" for="admin-report-people">จำนวนผู้ประสบภัย (คน)</label>
+                <input type="number" id="admin-report-people" class="text-input" min="0" placeholder="เช่น 2">
+              </div>
+              <div>
+                <label class="field-label" for="admin-helped-by">ผู้ให้ความช่วยเหลือ / หน่วยงาน</label>
                 <input type="text" id="admin-helped-by" class="text-input" placeholder="เช่น กู้ภัยสว่างบำเพ็ญ, เทศบาล">
               </div>
             </div>
+
+            <div>
+              <label class="field-label" for="admin-report-desc">รายละเอียดเหตุการณ์</label>
+              <textarea id="admin-report-desc" class="textarea-input" rows="3" placeholder="ระบุรายละเอียดเหตุการณ์"></textarea>
+            </div>
+
             <div class="admin-btn-row">
-              <button type="button" id="admin-save-status-btn" class="btn-success">✓ บันทึกสถานะ</button>
+              <button type="button" id="admin-save-status-btn" class="btn-success">✓ บันทึกการแก้ไขข้อมูล</button>
               <button type="button" id="admin-delete-report-btn" class="btn-danger">🗑️ ลบรายงานนี้</button>
             </div>
           </div>
@@ -397,22 +448,76 @@
           <div id="admin-support-controls" class="admin-controls-group" hidden>
             <div class="input-grid">
               <div>
-                <label class="field-label" for="admin-support-name">ชื่อจุดช่วยเหลือ</label>
+                <label class="field-label" for="admin-support-name">ชื่อจุดช่วยเหลือ / ศูนย์พักพิง</label>
                 <input type="text" id="admin-support-name" class="text-input">
               </div>
               <div>
-                <label class="field-label" for="admin-support-status">สถานะสิ่งของ</label>
-                <select id="admin-support-status" class="select-input">
-                  <option value="available">มีของ / พร้อมรับรอง</option>
-                  <option value="unavailable">ไม่มีของ / ปิดชั่วคราว</option>
-                  <option value="depleted">ของหมดแล้ว</option>
+                <label class="field-label" for="admin-support-category">ประเภทบริการ</label>
+                <select id="admin-support-category" class="select-input">
+                  <option value="shelter">ที่พักพิง / ปลอดภัย</option>
+                  <option value="sandbag">🟡 จุดรับทราย / กระสอบทราย</option>
+                  <option value="food">อาหารและน้ำดื่ม</option>
+                  <option value="medical">การแพทย์ / ยารักษาโรค</option>
+                  <option value="transport">เรือ / ยานพาหนะรับส่ง</option>
+                  <option value="other">อื่น ๆ</option>
                 </select>
               </div>
             </div>
+
+            <div class="input-grid">
+              <div>
+                <label class="field-label" for="admin-support-status">สถานะจุดช่วยเหลือ</label>
+                <select id="admin-support-status" class="select-input">
+                  <option value="available">🟢 มีของ / พร้อมรับรอง (เปิด)</option>
+                  <option value="unavailable">🟡 ไม่มีของ / พักชั่วคราว</option>
+                  <option value="depleted">🟠 ของหมดแล้ว</option>
+                  <option value="closed">⚫ ช่วยแล้ว / ปิดบริการ</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="field-label" for="admin-support-desc">รายละเอียดจุดช่วยเหลือ</label>
+              <textarea id="admin-support-desc" class="textarea-input" rows="2" placeholder="ระบุรายละเอียดจุดช่วยเหลือ"></textarea>
+            </div>
+
             <div class="admin-btn-row">
-              <button type="button" id="admin-save-support-btn" class="btn-success">✓ บันทึกจุดช่วยเหลือ</button>
+              <button type="button" id="admin-save-support-btn" class="btn-success">✓ บันทึกการแก้ไขจุดช่วยเหลือ</button>
               <button type="button" id="admin-delete-support-btn" class="btn-danger">🗑️ ลบจุดช่วยเหลือนี้</button>
             </div>
+          </div>
+        </div>
+
+        <!-- Related Navigation & Connection Hub for this Event -->
+        <div class="event-related-hub">
+          <div class="related-hub-header">
+            <span>🔗 เมนูที่เกี่ยวข้อง & จุดเชื่อมโยง</span>
+          </div>
+          <div class="related-hub-grid">
+            <button type="button" class="rel-link-btn" id="ev-link-map">
+              <span class="rel-link-icon">📍</span>
+              <span class="rel-link-text">โฟกัสบนแผนที่</span>
+            </button>
+            <button type="button" class="rel-link-btn" id="ev-link-district-report">
+              <span class="rel-link-icon">📊</span>
+              <span class="rel-link-text">ดูสรุปอำเภอนี้</span>
+            </button>
+            <button type="button" class="rel-link-btn" id="ev-link-sandbag">
+              <span class="rel-link-icon">🟡</span>
+              <span class="rel-link-text">หาจุดรับกระสอบทราย</span>
+            </button>
+            <button type="button" class="rel-link-btn" id="ev-link-shelter">
+              <span class="rel-link-icon">🟢</span>
+              <span class="rel-link-text">หาศูนย์พักพิงใกล้เคียง</span>
+            </button>
+            <button type="button" class="rel-link-btn" id="ev-link-add-here">
+              <span class="rel-link-icon">🆘</span>
+              <span class="rel-link-text">แจ้งเหตุใกล้เคียงนี้</span>
+            </button>
+            <button type="button" class="rel-link-btn" id="ev-link-copy-share">
+              <span class="rel-link-icon">📋</span>
+              <span class="rel-link-text">คัดลอกลิงก์แชร์</span>
+            </button>
           </div>
         </div>
       </div>
@@ -421,6 +526,143 @@
         <button type="button" id="event-view-map-btn" class="btn-view-map">
           <span>📍 ดูตำแหน่งบนแผนที่</span>
         </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ==================== COMPREHENSIVE REPORTS & STATS MODAL ==================== -->
+  <dialog id="reports-dashboard-modal" class="app-modal modal-wide">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-eyebrow" style="color: var(--color-report);">PRACHINBURI FLOOD INTELLIGENCE & REPORTS</span>
+          <h3>📊 ศูนย์รายงานและสถิติสถานการณ์น้ำท่วม</h3>
+          <p class="modal-subtitle">รายงานสรุปข้อมูลเหตุการณ์ จุดช่วยเหลือ และสถิติเชิงพื้นที่ จ.ปราจีนบุรี</p>
+        </div>
+        <div class="modal-header-actions">
+          <button type="button" id="export-csv-btn" class="ribbon-btn" title="ดาวน์โหลดไฟล์ตารางสรุปเหตุการณ์ทั้งหมด">📥 ส่งออก CSV</button>
+          <button type="button" id="print-reports-btn" class="ribbon-btn" title="พิมพ์รายงานสรุป">🖨️ พิมพ์รายงาน</button>
+          <button type="button" id="reports-modal-close" class="modal-close-btn" aria-label="ปิด">✕</button>
+        </div>
+      </div>
+
+      <div class="reports-modal-body">
+        <!-- Sub Tabs within Reports View -->
+        <div class="reports-nav-tabs" role="tablist">
+          <button type="button" class="reports-tab-btn active" data-report-tab="overview">📈 ภาพรวมสถิติ</button>
+          <button type="button" class="reports-tab-btn" data-report-tab="districts">📍 สรุปรายอำเภอ</button>
+          <button type="button" class="reports-tab-btn" data-report-tab="table">📋 ตารางบันทึกเหตุการณ์ทั้งหมด</button>
+        </div>
+
+        <!-- Tab 1: Overview Summary -->
+        <div id="tab-content-overview" class="reports-tab-pane active">
+          <div class="reports-kpi-grid">
+            <div class="kpi-card kpi-urgent">
+              <span class="kpi-icon">🆘</span>
+              <div class="kpi-info">
+                <span class="kpi-label">รอความช่วยเหลือด่วน</span>
+                <strong id="rep-kpi-urgent" class="kpi-num">0</strong>
+                <small class="kpi-sub">เคสที่ยังไม่ได้เข้าช่วยเหลือ</small>
+              </div>
+            </div>
+            <div class="kpi-card kpi-report">
+              <span class="kpi-icon">🌊</span>
+              <div class="kpi-info">
+                <span class="kpi-label">รายงานสถานการณ์น้ำท่วม</span>
+                <strong id="rep-kpi-flood" class="kpi-num">0</strong>
+                <small class="kpi-sub">จุดเฝ้าระวัง / น้ำท่วมขัง</small>
+              </div>
+            </div>
+            <div class="kpi-card kpi-support">
+              <span class="kpi-icon">⌂</span>
+              <div class="kpi-info">
+                <span class="kpi-label">จุดช่วยเหลือ / ศูนย์พักพิง (เปิด)</span>
+                <strong id="rep-kpi-support" class="kpi-num">0</strong>
+                <small class="kpi-sub">พร้อมรับรอง / มีสิ่งของ</small>
+              </div>
+            </div>
+            <div class="kpi-card kpi-closed">
+              <span class="kpi-icon">⚫</span>
+              <div class="kpi-info">
+                <span class="kpi-label">จุดช่วยเหลือที่ปิดแล้ว</span>
+                <strong id="rep-kpi-closed" class="kpi-num">0</strong>
+                <small class="kpi-sub">ช่วยเหลือเสร็จสิ้น / ปิดบริการ</small>
+              </div>
+            </div>
+            <div class="kpi-card kpi-done">
+              <span class="kpi-icon">✓</span>
+              <div class="kpi-info">
+                <span class="kpi-label">ช่วยเหลือสำเร็จแล้ว</span>
+                <strong id="rep-kpi-done" class="kpi-num">0</strong>
+                <small class="kpi-sub">ผู้ประสบภัยได้รับการดูแลแล้ว</small>
+              </div>
+            </div>
+            <div class="kpi-card kpi-people">
+              <span class="kpi-icon">👥</span>
+              <div class="kpi-info">
+                <span class="kpi-label">จำนวนผู้ประสบภัยรวม</span>
+                <strong id="rep-kpi-people" class="kpi-num">0</strong>
+                <small class="kpi-sub">คน ตามที่ระบุในรายงาน</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: District Breakdown -->
+        <div id="tab-content-districts" class="reports-tab-pane" hidden>
+          <div class="table-responsive">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>อำเภอ</th>
+                  <th class="text-center">รอช่วยเหลือ (แดง)</th>
+                  <th class="text-center">รายงานน้ำ (น้ำเงิน)</th>
+                  <th class="text-center">จุดช่วยเหลือเปิด (เขียว)</th>
+                  <th class="text-center">จุดช่วยเหลือปิด (ดำ)</th>
+                  <th class="text-center">ช่วยแล้ว (เทา)</th>
+                  <th class="text-center">รวมทั้งหมด</th>
+                </tr>
+              </thead>
+              <tbody id="district-breakdown-tbody">
+                <!-- Injected dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 3: Full Table Log with Search & Filter -->
+        <div id="tab-content-table" class="reports-tab-pane" hidden>
+          <div class="table-filter-bar">
+            <input type="search" id="report-search-input" class="text-input" placeholder="🔍 ค้นหารายละเอียด, สถานที่, ผู้ช่วยเหลือ, เบอร์โทร…">
+            <select id="report-type-filter" class="select-input">
+              <option value="all">ทุกประเภท</option>
+              <option value="help">🆘 ขอความช่วยเหลือ (แดง)</option>
+              <option value="flood">🌊 รายงานน้ำท่วม (น้ำเงิน)</option>
+              <option value="sandbag">🟡 รับกระสอบทราย (เหลือง)</option>
+              <option value="assistance">⌂ จุดช่วยเหลือเปิด (เขียว)</option>
+              <option value="closed">⚫ จุดช่วยเหลือปิด (ดำ)</option>
+              <option value="done">✓ ช่วยเหลือแล้ว (เทา)</option>
+            </select>
+          </div>
+          <div class="table-responsive full-log-wrap">
+            <table class="report-table" id="full-log-table">
+              <thead>
+                <tr>
+                  <th>เวลา</th>
+                  <th>ประเภท</th>
+                  <th>รายละเอียด</th>
+                  <th>ผู้ประสบภัย</th>
+                  <th>สถานะ</th>
+                  <th>ผู้ช่วยเหลือ</th>
+                  <th>จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="full-log-tbody">
+                <!-- Injected dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </dialog>
@@ -439,11 +681,12 @@
 
       <form id="staff-login-form" class="report-form">
         <div class="form-section">
-          <label class="field-label" for="staff-email">อีเมล</label>
-          <input type="email" id="staff-email" class="text-input" placeholder="rescuer@example.com" autocomplete="username" required>
+          <label class="field-label" for="staff-email">อีเมลเจ้าหน้าที่</label>
+          <input type="email" id="staff-email" class="text-input" placeholder="staff@prachin.go.th" autocomplete="username" required>
 
           <label class="field-label" for="staff-password">รหัสผ่าน</label>
-          <input type="password" id="staff-password" class="text-input" placeholder="••••••••" autocomplete="current-password" required>
+          <input type="password" id="staff-password" class="text-input" placeholder="password123" autocomplete="current-password" required>
+          <small style="color:var(--text-muted); font-size:11px; margin-top:4px;">เจ้าหน้าที่เข้าทดสอบด้วย: staff@prachin.go.th / password123</small>
         </div>
 
         <div class="modal-footer">
@@ -452,6 +695,184 @@
           </button>
         </div>
       </form>
+    </div>
+  </dialog>
+
+  <!-- ==================== QUICK LINKS & RELATED MENUS HUB MODAL ==================== -->
+  <dialog id="quick-links-modal" class="app-modal modal-wide">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-eyebrow" style="color: var(--vue-green);">QUICK NAVIGATION & CONNECTED SERVICES</span>
+          <h3>🔗 ศูนย์รวมเมนูและจุดเชื่อมโยง</h3>
+          <p class="modal-subtitle">เข้าถึงทุกส่วนสำคัญ แผนที่ รายงาน จุดช่วยเหลือ และสายด่วน จ.ปราจีนบุรี</p>
+        </div>
+        <button type="button" id="quick-links-close" class="modal-close-btn" aria-label="ปิด">✕</button>
+      </div>
+
+      <div class="quick-links-body">
+        <!-- Section 1: เมนูหลักและแผนที่ -->
+        <div class="quick-section-title">🗺️ แผนที่ & รายงานสถานการณ์สด</div>
+        <div class="quick-nav-tiles-grid">
+          <div class="quick-nav-tile" role="button" tabindex="0" data-hub-action="live-map">
+            <span class="tile-icon">🗺️</span>
+            <div class="tile-text">
+              <strong>แผนที่เหตุการณ์สด</strong>
+              <small>ดูพิกัดน้ำท่วม ผู้ประสบภัย และจุดช่วยเหลือทั้งหมด</small>
+            </div>
+            <span class="tile-arrow">➔</span>
+          </div>
+
+          <div class="quick-nav-tile" role="button" tabindex="0" data-hub-action="gistda-layer">
+            <span class="tile-icon">🛰️</span>
+            <div class="tile-text">
+              <strong>ดาวเทียมน้ำท่วม GISTDA</strong>
+              <small>เปิด/ปิด ชั้นข้อมูลภาพถ่ายดาวเทียมตรวจวัดพื้นที่น้ำท่วม</small>
+            </div>
+            <span class="tile-arrow">➔</span>
+          </div>
+
+          <div class="quick-nav-tile" role="button" tabindex="0" data-hub-action="reports-dashboard">
+            <span class="tile-icon">📊</span>
+            <div class="tile-text">
+              <strong>ศูนย์รายงาน & สถิติ 7 อำเภอ</strong>
+              <small>สรุปยอด KPI, รายอำเภอ, ตารางเหตุการณ์, ดาวน์โหลด CSV</small>
+            </div>
+            <span class="tile-arrow">➔</span>
+          </div>
+        </div>
+
+        <!-- Section 2: บริการช่วยเหลือและแจ้งเหตุ -->
+        <div class="quick-section-title">🚨 บริการแจ้งเหตุ & จุดช่วยเหลือ</div>
+        <div class="quick-nav-tiles-grid">
+          <div class="quick-nav-tile tile-urgent" role="button" tabindex="0" data-hub-action="report-help">
+            <span class="tile-icon">🆘</span>
+            <div class="tile-text">
+              <strong style="color:#ef4444;">ขอความช่วยเหลือฉุกเฉิน</strong>
+              <small>แจ้งเหตุด่วน ติดน้ำท่วม อาหาร/น้ำ ยารักษาโรค คนป่วย</small>
+            </div>
+            <span class="tile-arrow">➔</span>
+          </div>
+
+          <div class="quick-nav-tile tile-report" role="button" tabindex="0" data-hub-action="report-flood">
+            <span class="tile-icon">🌊</span>
+            <div class="tile-text">
+              <strong style="color:#3b82f6;">รายงานน้ำท่วม</strong>
+              <small>แจ้งระดับน้ำ เส้นทางสัญจร จุดเฝ้าระวังน้ำท่วมขัง</small>
+            </div>
+            <span class="tile-arrow">➔</span>
+          </div>
+
+          <div class="quick-nav-tile tile-sandbag" role="button" tabindex="0" data-hub-action="filter-sandbag">
+            <span class="tile-icon">🟡</span>
+            <div class="tile-text">
+              <strong style="color:#f59e0b;">จุดรับทราย & กระสอบทราย</strong>
+              <small>ดูจุดแจกทราย/กระสอบทราย หรือแจ้งจุดรับทรายเพิ่มเติม</small>
+            </div>
+            <span class="tile-arrow">➔</span>
+          </div>
+
+          <div class="quick-nav-tile tile-support" role="button" tabindex="0" data-hub-action="filter-support">
+            <span class="tile-icon">🟢</span>
+            <div class="tile-text">
+              <strong style="color:#42b883;">จุดช่วยเหลือ & ศูนย์พักพิง</strong>
+              <small>ค้นหาที่พักพิง แจกอาหาร ยานพาหนะรับส่ง</small>
+            </div>
+            <span class="tile-arrow">➔</span>
+          </div>
+
+          <div class="quick-nav-tile tile-closed" role="button" tabindex="0" data-hub-action="filter-closed">
+            <span class="tile-icon">⚫</span>
+            <div class="tile-text">
+              <strong>จุดช่วยเหลือที่ปิดแล้ว</strong>
+              <small>ตรวจสอบจุดที่เสร็จสิ้นภารกิจและปิดบริการแล้ว</small>
+            </div>
+            <span class="tile-arrow">➔</span>
+          </div>
+
+          <div class="quick-nav-tile tile-done" role="button" tabindex="0" data-hub-action="filter-done">
+            <span class="tile-icon">✓</span>
+            <div class="tile-text">
+              <strong>เคสช่วยเหลือสำเร็จแล้ว</strong>
+              <small>ดูรายการที่หน่วยงานกู้ภัยเข้าช่วยเหลือเรียบร้อยแล้ว</small>
+            </div>
+            <span class="tile-arrow">➔</span>
+          </div>
+        </div>
+
+        <!-- Section 3: สายด่วนฉุกเฉิน ปราจีนบุรี -->
+        <div class="quick-section-title">📞 เบอร์โทรศัพท์ฉุกเฉิน จ.ปราจีนบุรี</div>
+        <div class="quick-hotlines-grid">
+          <a href="tel:1784" class="hotline-card">
+            <span class="hotline-badge">1784</span>
+            <div class="hotline-info">
+              <strong>สายด่วน ปภ. (กรมป้องกันฯ)</strong>
+              <small>แจ้งเหตุน้ำท่วมตลอด 24 ชม.</small>
+            </div>
+          </a>
+          <a href="tel:037211199" class="hotline-card">
+            <span class="hotline-badge">037-211-199</span>
+            <div class="hotline-info">
+              <strong>กู้ภัยสว่างบำเพ็ญ ปราจีนบุรี</strong>
+              <small>หน่วยกู้ชีพ กู้ภัย ช่วยเหลือผู้ประสบภัย</small>
+            </div>
+          </a>
+          <a href="tel:037281199" class="hotline-card">
+            <span class="hotline-badge">037-281-199</span>
+            <div class="hotline-info">
+              <strong>กู้ภัยร่วมกตัญญู กบินทร์บุรี</strong>
+              <small>จุดกู้ภัยเขต อ.กบินทร์บุรี</small>
+            </div>
+          </a>
+          <a href="tel:037211088" class="hotline-card">
+            <span class="hotline-badge">037-211-088</span>
+            <div class="hotline-info">
+              <strong>รพ.เจ้าพระยาอภัยภูเบศร</strong>
+              <small>อุบัติเหตุและเหตุฉุกเฉินทางการแพทย์</small>
+            </div>
+          </a>
+        </div>
+
+        <!-- Section 4: องค์การบริหารส่วนจังหวัดปราจีนบุรี -->
+        <div class="quick-section-title">🏛️ องค์การบริหารส่วนจังหวัดปราจีนบุรี (อบจ.ปราจีนบุรี)</div>
+        <div class="quick-hotlines-grid">
+          <a href="tel:0636519296" class="hotline-card">
+            <span class="hotline-badge">063-651-9296</span>
+            <div class="hotline-info">
+              <strong>ปลัด อบจ.ปราจีนบุรี</strong>
+              <small>ประสานงานและสั่งการศูนย์ช่วยเหลือ</small>
+            </div>
+          </a>
+          <a href="tel:0876862567" class="hotline-card">
+            <span class="hotline-badge">087-686-2567</span>
+            <div class="hotline-info">
+              <strong>รองปลัด อบจ.ปราจีนบุรี</strong>
+              <small>ประสานงานและกำกับดูแลพื้นที่</small>
+            </div>
+          </a>
+          <a href="tel:0813458136" class="hotline-card">
+            <span class="hotline-badge">081-345-8136</span>
+            <div class="hotline-info">
+              <strong>หัวหน้าสำนักปลัด อบจ.</strong>
+              <small>บริหารงานอำนวยการและประสานงาน</small>
+            </div>
+          </a>
+          <a href="tel:0922633714" class="hotline-card">
+            <span class="hotline-badge">092-263-3714</span>
+            <div class="hotline-info">
+              <strong>หัวหน้าฝ่ายป้องกันและบรรเทาสาธารณภัย</strong>
+              <small>ปฏิบัติการกู้ภัย เครื่องจักรกล และกำลังพล</small>
+            </div>
+          </a>
+          <a href="tel:0864054392" class="hotline-card">
+            <span class="hotline-badge">086-405-4392</span>
+            <div class="hotline-info">
+              <strong>นักป้องกันและบรรเทาสาธารณภัย</strong>
+              <small>เจ้าหน้าที่เผชิญเหตุและช่วยเหลือผู้ประสบภัย</small>
+            </div>
+          </a>
+        </div>
+      </div>
     </div>
   </dialog>
 

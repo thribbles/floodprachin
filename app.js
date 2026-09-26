@@ -5,6 +5,7 @@ import {
   isStaffUser,
   listReports,
   createReport,
+  updateReport,
   updateReportStatus,
   deleteReport,
   listAssistancePoints,
@@ -23,6 +24,16 @@ import {
 const PRACHINBURI_CENTER = [14.05, 101.38];
 const STORAGE_KEY = 'phuengpha-flood-reports-v1';
 
+const PRACHINBURI_DISTRICTS = [
+  { name: 'อ.เมืองปราจีนบุรี', lat: 14.05, lng: 101.37 },
+  { name: 'อ.กบินทร์บุรี', lat: 13.98, lng: 101.72 },
+  { name: 'อ.บ้านสร้าง', lat: 13.99, lng: 101.21 },
+  { name: 'อ.ศรีมหาโพธิ', lat: 13.88, lng: 101.51 },
+  { name: 'อ.ประจันตคาม', lat: 14.12, lng: 101.55 },
+  { name: 'อ.นาดี', lat: 14.14, lng: 101.99 },
+  { name: 'อ.ศรีมโหสถ', lat: 13.86, lng: 101.42 }
+];
+
 const typeNames = {
   help: 'ขอความช่วยเหลือ',
   flood: 'รายงานน้ำท่วม',
@@ -31,20 +42,29 @@ const typeNames = {
 
 const categoryNames = {
   shelter: 'ศูนย์พักพิง / ปลอดภัย',
+  sandbag: 'จุดรับทราย / กระสอบทราย',
   food: 'อาหารและน้ำดื่ม',
   medical: 'การแพทย์ / ยา',
   transport: 'เรือ / ยานพาหนะ',
   other: 'อื่น ๆ'
 };
 
+function isSandbagPoint(item) {
+  if (!item) return false;
+  return item.category === 'sandbag' ||
+    (item.name && (item.name.includes('ทราย') || item.name.includes('กระสอบ'))) ||
+    (item.description && (item.description.includes('ทราย') || item.description.includes('กระสอบ')));
+}
+
 const supportStatusNames = {
   available: 'มีของ / พร้อมรับรอง',
+  closed: 'ช่วยเหลือแล้ว / ปิดบริการ',
   unavailable: 'ปิดชั่วคราว',
   depleted: 'ของหมดแล้ว'
 };
 
 // --- State Variables ---
-let reports = database ? [] : loadLocalReports();
+let reports = loadLocalReports();
 let assistancePoints = [];
 let currentFilter = 'all'; // 'all' | 'help' | 'flood' | 'done' | 'assistance'
 let provinceGeometry = null;
@@ -147,8 +167,16 @@ function createMarkerIcon(item, kind) {
       iconEmoji = '🆘';
     }
   } else {
-    colorClass = 'support'; // จุดช่วยเหลือ = สีเขียว
-    iconEmoji = '⌂';
+    if (item.status === 'closed') {
+      colorClass = 'closed'; // ช่วยเหลือแล้ว / ปิด = สีดำ
+      iconEmoji = '⚫';
+    } else if (isSandbagPoint(item)) {
+      colorClass = 'sandbag'; // จุดรับกระสอบทราย = สีเหลือง
+      iconEmoji = '🟡';
+    } else {
+      colorClass = 'support'; // จุดช่วยเหลือ = สีเขียว
+      iconEmoji = '⌂';
+    }
   }
 
   const thumbHtml = item.attachmentPath
@@ -157,9 +185,9 @@ function createMarkerIcon(item, kind) {
 
   const pulseHtml = (kind === 'report' && item.status !== 'done')
     ? `<span class="marker-ring-pulse ${colorClass}"></span>`
-    : (kind === 'assistance')
-    ? `<span class="marker-ring-pulse support"></span>`
-    : '';
+    : (kind === 'assistance' && item.status !== 'closed')
+      ? `<span class="marker-ring-pulse ${colorClass}"></span>`
+      : '';
 
   return L.divIcon({
     className: 'custom-radar-marker',
@@ -170,7 +198,7 @@ function createMarkerIcon(item, kind) {
   });
 }
 
-// --- Map Click Handler (Popup 3 สี เมื่อกดที่ว่างบนแผนที่) ---
+// --- Map Click Handler (Popup ปุ่มสี และ เมนูเชื่อมโยง เมื่อกดที่ว่างบนแผนที่) ---
 map.on('click', event => {
   const { lat, lng } = event.latlng;
   if (!isInsideProvince(lat, lng)) {
@@ -187,7 +215,7 @@ map.on('click', event => {
     return;
   }
 
-  // หากเป็นการกดบนที่ว่างของแผนที่ ให้แสดง Popup ปุ่ม 3 สี เพื่อส่งต่อไปหน้า Event / ฟอร์มแจ้งเหตุ
+  // หากเป็นการกดบนที่ว่างของแผนที่ ให้แสดง Popup ปุ่มสี และจุดเชื่อมโยง
   const popupContainer = document.createElement('div');
   popupContainer.className = 'map-empty-click-popup';
   popupContainer.innerHTML = `
@@ -198,13 +226,19 @@ map.on('click', event => {
     <div class="empty-popup-prompt">เลือกรายการที่ต้องการแจ้ง ณ จุดนี้:</div>
     <div class="empty-popup-actions">
       <button type="button" class="popup-btn popup-btn-urgent" data-type="help">
-        <span>🆘</span> ขอความช่วยเหลือ (แดง)
+        <span>🆘</span> ขอความช่วยเหลือ
       </button>
       <button type="button" class="popup-btn popup-btn-report" data-type="flood">
-        <span>🌊</span> รายงานน้ำท่วม (น้ำเงิน)
+        <span>🌊</span> รายงานน้ำท่วม
+      </button>
+      <button type="button" class="popup-btn popup-btn-sandbag" data-type="sandbag">
+        <span>🟡</span> จุดรับกระสอบทราย
       </button>
       <button type="button" class="popup-btn popup-btn-support" data-type="assistance">
-        <span>⌂</span> จุดช่วยเหลือ / พักพิง (เขียว)
+        <span>⌂</span> จุดช่วยเหลือ / พักพิง
+      </button>
+      <button type="button" class="popup-btn popup-btn-hub" data-type="hub">
+        <span>🔗</span> เมนูเชื่อมโยง & ศูนย์รายงาน
       </button>
     </div>
   `;
@@ -213,7 +247,11 @@ map.on('click', event => {
     btn.addEventListener('click', () => {
       const type = btn.dataset.type;
       map.closePopup();
-      openReportModalWithType(type, { lat, lng });
+      if (type === 'hub') {
+        document.getElementById('quick-links-modal')?.showModal();
+      } else {
+        openReportModalWithType(type, { lat, lng });
+      }
     });
   });
 
@@ -250,8 +288,11 @@ function setReportLocation(lat, lng) {
 function render() {
   const pendingHelp = reports.filter(r => r.type === 'help' && r.status !== 'done').length;
   const floodCount = reports.filter(r => r.type === 'flood' && r.status !== 'done').length;
-  const doneCount = reports.filter(r => r.status === 'done').length;
-  const supportCount = assistancePoints.length;
+  const sandbagCount = assistancePoints.filter(p => isSandbagPoint(p) && p.status !== 'closed').length;
+  const closedSupportCount = assistancePoints.filter(p => p.status === 'closed').length;
+  const activeSupportCount = assistancePoints.filter(p => p.status !== 'closed').length;
+  const doneCount = reports.filter(r => r.status === 'done').length + closedSupportCount;
+  const supportCount = activeSupportCount;
   const totalCount = reports.length + assistancePoints.length;
 
   // Update Counters in Header & Stats Overlay
@@ -263,6 +304,8 @@ function render() {
   document.getElementById('filter-all-num').textContent = totalCount;
   document.getElementById('filter-help-num').textContent = pendingHelp;
   document.getElementById('filter-flood-num').textContent = floodCount;
+  const filterSandbagNum = document.getElementById('filter-sandbag-num');
+  if (filterSandbagNum) filterSandbagNum.textContent = sandbagCount;
   document.getElementById('filter-done-num').textContent = doneCount;
   document.getElementById('filter-support-num').textContent = supportCount;
 
@@ -395,8 +438,14 @@ function render() {
   });
 
   // 2. Render Assistance Points
-  if (currentFilter === 'all' || currentFilter === 'assistance') {
+  if (currentFilter === 'all' || currentFilter === 'assistance' || currentFilter === 'sandbag' || currentFilter === 'done') {
     assistancePoints.forEach(point => {
+      const isClosedPoint = point.status === 'closed';
+      const isSandbag = isSandbagPoint(point);
+
+      if (currentFilter === 'done' && !isClosedPoint) return;
+      if (currentFilter === 'sandbag' && (!isSandbag || isClosedPoint)) return;
+
       visibleCount++;
 
       // Marker
@@ -406,11 +455,19 @@ function render() {
           zIndexOffset: 1200
         });
 
+        const accentColor = isClosedPoint ? '#475569' : isSandbag ? '#f59e0b' : '#42b883';
+        const iconChar = isClosedPoint ? '⚫' : isSandbag ? '🟡' : '⌂';
+        const statusText = isClosedPoint
+          ? '⚫ ปิดบริการแล้ว'
+          : isSandbag
+            ? '🟡 จุดรับทราย/กระสอบทราย'
+            : (supportStatusNames[point.status] || '');
+
         marker.bindPopup(`
           <div style="font-family:'IBM Plex Sans Thai',sans-serif; min-width:200px; padding:2px;">
-            <strong style="color:#42b883; font-size:13px;">⌂ ${escapeHtml(point.name)}</strong>
-            <div style="font-size:11px; color:#42b883; margin:2px 0;">
-              ${categoryNames[point.category] || 'จุดช่วยเหลือ'} · ${supportStatusNames[point.status] || ''}
+            <strong style="color:${accentColor}; font-size:13px;">${iconChar} ${escapeHtml(point.name)}</strong>
+            <div style="font-size:11px; color:${accentColor}; margin:2px 0;">
+              ${categoryNames[point.category] || 'จุดช่วยเหลือ'} · ${statusText}
             </div>
             <p style="margin:4px 0; font-size:12px; line-height:1.4;">${escapeHtml(point.description)}</p>
           </div>
@@ -430,19 +487,27 @@ function render() {
       card.setAttribute('role', 'button');
       card.tabIndex = 0;
 
+      const iconChar = isClosedPoint ? '⚫' : isSandbag ? '🟡' : '⌂';
       let thumbHtml = '';
       if (point.attachmentPath) {
         thumbHtml = `<img src="${cacheBustImage(point.attachmentPath, point.createdAt)}" alt="รูป" class="feed-card-thumb" loading="lazy">`;
       } else {
-        thumbHtml = `<div class="feed-card-icon-placeholder">⌂</div>`;
+        thumbHtml = `<div class="feed-card-icon-placeholder">${iconChar}</div>`;
       }
+
+      const badgeClass = isClosedPoint ? 'badge-closed' : isSandbag ? 'badge-sandbag' : 'badge-support';
+      const badgeText = isClosedPoint
+        ? '⚫ ปิดบริการแล้ว'
+        : isSandbag
+          ? '🟡 รับกระสอบทราย'
+          : (supportStatusNames[point.status] || 'มีของ');
 
       card.innerHTML = `
         ${thumbHtml}
         <div class="feed-card-content">
           <div class="feed-card-top">
             <span class="feed-kind-tag">${categoryNames[point.category] || 'จุดช่วยเหลือ'}</span>
-            <span class="badge badge-support">${supportStatusNames[point.status] || 'มีของ'}</span>
+            <span class="badge ${badgeClass}">${badgeText}</span>
           </div>
           <strong style="font-size:13px; color:var(--text-main); margin-bottom:2px;">${escapeHtml(point.name)}</strong>
           <p class="feed-card-desc">${escapeHtml(point.description)}</p>
@@ -482,9 +547,12 @@ function render() {
 function focusItemOnMap(lat, lng, markerKey) {
   map.setView([lat, lng], 15, { animate: true });
   const marker = markersMap.get(markerKey);
-  if (marker) {
-    setTimeout(() => marker.openPopup(), 150);
-  }
+  if (!marker) return;
+  const onMoveEnd = () => {
+    marker.openPopup();
+    map.off('moveend', onMoveEnd);
+  };
+  map.on('moveend', onMoveEnd);
 }
 
 // --- Event Detail Dialog Logic ---
@@ -533,8 +601,14 @@ function openEventDialog(item, kind) {
     adminSupportControls.hidden = true;
 
     if (canEdit) {
-      document.getElementById('admin-status-select').value = item.status;
+      const typeEl = document.getElementById('admin-report-type');
+      if (typeEl) typeEl.value = item.type || 'help';
+      document.getElementById('admin-status-select').value = item.status || 'pending';
+      const peopleEl = document.getElementById('admin-report-people');
+      if (peopleEl) peopleEl.value = item.people ?? '';
       document.getElementById('admin-helped-by').value = item.helpedBy || '';
+      const descEl = document.getElementById('admin-report-desc');
+      if (descEl) descEl.value = item.description || '';
     }
   } else {
     // Assistance Point
@@ -542,8 +616,10 @@ function openEventDialog(item, kind) {
     document.getElementById('event-title').textContent = item.name;
     document.getElementById('event-description-text').textContent = item.description;
 
-    statusBadge.className = 'badge badge-support';
-    statusBadge.textContent = supportStatusNames[item.status] || 'มีของ';
+    const isClosed = item.status === 'closed';
+    const isSandbag = isSandbagPoint(item);
+    statusBadge.className = `badge ${isClosed ? 'badge-closed' : isSandbag ? 'badge-sandbag' : 'badge-support'}`;
+    statusBadge.textContent = isClosed ? '⚫ ปิดบริการแล้ว' : isSandbag ? '🟡 จุดรับกระสอบทราย' : (supportStatusNames[item.status] || 'มีของ');
 
     metaGrid.innerHTML = `
       <div>🏷️ ประเภท: <strong>${categoryNames[item.category] || 'ทั่วไป'}</strong></div>
@@ -559,8 +635,12 @@ function openEventDialog(item, kind) {
     adminSupportControls.hidden = !canEdit;
 
     if (canEdit) {
-      document.getElementById('admin-support-name').value = item.name;
-      document.getElementById('admin-support-status').value = item.status;
+      document.getElementById('admin-support-name').value = item.name || '';
+      const catEl = document.getElementById('admin-support-category');
+      if (catEl) catEl.value = item.category || 'shelter';
+      document.getElementById('admin-support-status').value = item.status || 'available';
+      const descEl = document.getElementById('admin-support-desc');
+      if (descEl) descEl.value = item.description || '';
     }
   }
 
@@ -579,22 +659,29 @@ function openEventDialog(item, kind) {
 // --- Admin Controls Handlers ---
 document.getElementById('admin-save-status-btn').addEventListener('click', async () => {
   if (!activeEventItem || activeEventType !== 'report') return;
+  const type = document.getElementById('admin-report-type')?.value || activeEventItem.type;
   const status = document.getElementById('admin-status-select').value;
+  const peopleVal = document.getElementById('admin-report-people')?.value;
+  const people = peopleVal !== '' && !isNaN(Number(peopleVal)) ? Number(peopleVal) : null;
   const helpedBy = document.getElementById('admin-helped-by').value.trim();
+  const description = document.getElementById('admin-report-desc')?.value.trim() || activeEventItem.description;
   const btn = document.getElementById('admin-save-status-btn');
 
   btn.disabled = true;
   try {
     if (database) {
-      await updateReportStatus(activeEventItem, status, helpedBy);
+      await updateReport(activeEventItem, { type, status, people, helpedBy, description });
       await syncReports();
     } else {
+      activeEventItem.type = type;
       activeEventItem.status = status;
+      activeEventItem.people = people;
       activeEventItem.helpedBy = helpedBy;
+      activeEventItem.description = description;
       saveLocalReports();
       render();
     }
-    toast('อัปเดตสถานะสำเร็จ');
+    toast('บันทึกการแก้ไขข้อมูลเรียบร้อย');
     document.getElementById('event-dialog').close();
   } catch (err) {
     toast(describeError(err));
@@ -628,7 +715,9 @@ document.getElementById('admin-delete-report-btn').addEventListener('click', asy
 document.getElementById('admin-save-support-btn').addEventListener('click', async () => {
   if (!activeEventItem || activeEventType !== 'assistance') return;
   const name = document.getElementById('admin-support-name').value.trim();
+  const category = document.getElementById('admin-support-category')?.value || activeEventItem.category;
   const status = document.getElementById('admin-support-status').value;
+  const description = document.getElementById('admin-support-desc')?.value.trim() || activeEventItem.description;
   const btn = document.getElementById('admin-save-support-btn');
 
   if (!name) return toast('กรุณาระบุชื่อจุดช่วยเหลือ');
@@ -636,10 +725,16 @@ document.getElementById('admin-save-support-btn').addEventListener('click', asyn
   btn.disabled = true;
   try {
     if (database) {
-      await updateAssistancePoint(activeEventItem, { name, status });
+      await updateAssistancePoint(activeEventItem, { name, category, status, description });
       await syncAssistancePoints();
+    } else {
+      activeEventItem.name = name;
+      activeEventItem.category = category;
+      activeEventItem.status = status;
+      activeEventItem.description = description;
+      render();
     }
-    toast('อัปเดตจุดช่วยเหลือเรียบร้อย');
+    toast('บันทึกการแก้ไขจุดช่วยเหลือเรียบร้อย');
     document.getElementById('event-dialog').close();
   } catch (err) {
     toast(describeError(err));
@@ -656,6 +751,9 @@ document.getElementById('admin-delete-support-btn').addEventListener('click', as
     if (database) {
       await deleteAssistancePoint(activeEventItem);
       await syncAssistancePoints();
+    } else {
+      assistancePoints = assistancePoints.filter(p => p.id !== activeEventItem.id);
+      render();
     }
     toast('ลบจุดช่วยเหลือเรียบร้อย');
     document.getElementById('event-dialog').close();
@@ -678,11 +776,73 @@ document.getElementById('event-view-map-btn').addEventListener('click', () => {
   }
 });
 
+// Event Dialog Related Links Hub Buttons
+document.getElementById('ev-link-map')?.addEventListener('click', () => {
+  if (activeEventItem) {
+    document.getElementById('event-dialog').close();
+    focusItemOnMap(activeEventItem.lat, activeEventItem.lng, `${activeEventType}-${activeEventItem.id}`);
+    if (window.innerWidth <= 768) setMobileView('map');
+  }
+});
+
+document.getElementById('ev-link-district-report')?.addEventListener('click', () => {
+  if (activeEventItem) {
+    document.getElementById('event-dialog').close();
+    renderReportsDashboard();
+    document.querySelector('.reports-tab-btn[data-report-tab="districts"]')?.click();
+    document.getElementById('reports-dashboard-modal')?.showModal();
+  }
+});
+
+document.getElementById('ev-link-sandbag')?.addEventListener('click', () => {
+  document.getElementById('event-dialog').close();
+  const chip = document.querySelector('.filter-chip[data-filter="sandbag"]');
+  if (chip) chip.click();
+  toast('แสดงเฉพาะจุดรับกระสอบทราย');
+});
+
+document.getElementById('ev-link-shelter')?.addEventListener('click', () => {
+  document.getElementById('event-dialog').close();
+  const chip = document.querySelector('.filter-chip[data-filter="assistance"]');
+  if (chip) chip.click();
+  toast('แสดงจุดช่วยเหลือและศูนย์พักพิง');
+});
+
+document.getElementById('ev-link-add-here')?.addEventListener('click', () => {
+  if (activeEventItem) {
+    const coords = { lat: activeEventItem.lat, lng: activeEventItem.lng };
+    document.getElementById('event-dialog').close();
+    openReportModalWithType('help', coords);
+  }
+});
+
+document.getElementById('ev-link-copy-share')?.addEventListener('click', async () => {
+  if (activeEventItem) {
+    const title = activeEventType === 'report' ? typeNames[activeEventItem.type] : activeEventItem.name;
+    const shareText = `[น้ำท่วมปราจีน69.] ${title} - พิกัด: ${Number(activeEventItem.lat).toFixed(5)}, ${Number(activeEventItem.lng).toFixed(5)} https://maps.google.com/?q=${activeEventItem.lat},${activeEventItem.lng}`;
+    try {
+      await navigator.clipboard.writeText(shareText);
+      toast('คัดลอกลิงก์และพิกัดเหตุการณ์เรียบร้อย');
+    } catch {
+      toast(`พิกัด: ${Number(activeEventItem.lat).toFixed(5)}, ${Number(activeEventItem.lng).toFixed(5)}`);
+    }
+  }
+});
+
 // --- Easy Reporting Form Modal Logic & Navigation Connections ---
 let selectedType = 'help';
 
 function selectReportType(type) {
-  selectedType = type || 'help';
+  if (type === 'sandbag') {
+    selectedType = 'assistance';
+    const catEl = document.getElementById('point-category');
+    if (catEl) catEl.value = 'sandbag';
+    const nameEl = document.getElementById('point-name');
+    if (nameEl && !nameEl.value) nameEl.value = 'จุดรับทรายและกระสอบทราย';
+  } else {
+    selectedType = type || 'help';
+  }
+  document.querySelector('#report-modal h3').textContent = typeNames[selectedType] || 'แจ้งเหตุ';
   document.querySelectorAll('.type-card').forEach(btn => {
     btn.classList.toggle('selected', btn.dataset.type === selectedType);
   });
@@ -694,6 +854,7 @@ function selectReportType(type) {
 }
 
 function openReportModalWithType(type, coords = null) {
+  document.getElementById('report-form-message').hidden = true;
   selectReportType(type || 'help');
   if (coords && coords.lat && coords.lng) {
     setReportLocation(coords.lat, coords.lng);
@@ -704,8 +865,8 @@ function openReportModalWithType(type, coords = null) {
   }
 }
 
-// 3 Colored FAB Buttons:
-// ขอความช่วยเหลือ (แดง), รายงานน้ำท่วม (น้ำเงิน), จุดช่วยเหลือ (เขียว)
+// 4 Colored FAB Buttons + Hub Button:
+// ขอความช่วยเหลือ (แดง), รายงานน้ำท่วม (น้ำเงิน), รับกระสอบทราย (เหลือง), จุดช่วยเหลือ (เขียว), เมนูเชื่อมโยง
 document.querySelectorAll('.fab-btn[data-open-type]').forEach(btn => {
   btn.addEventListener('click', () => {
     const type = btn.dataset.openType;
@@ -727,7 +888,7 @@ document.getElementById('report-modal-close').addEventListener('click', () => {
 });
 
 // Close dialog on clicking backdrop outside card
-['report-modal', 'event-dialog', 'staff-modal'].forEach(id => {
+['report-modal', 'event-dialog', 'staff-modal', 'reports-dashboard-modal', 'quick-links-modal'].forEach(id => {
   const dialog = document.getElementById(id);
   if (dialog) {
     dialog.addEventListener('click', event => {
@@ -807,16 +968,29 @@ document.getElementById('modal-pick-map-btn').addEventListener('click', () => {
 });
 
 // Submit Report Form
+function reportFormError(message, targetId) {
+  const messageNode = document.getElementById('report-form-message');
+  messageNode.textContent = message;
+  messageNode.hidden = false;
+  messageNode.scrollIntoView({ block: 'center' });
+  messageNode.focus({ preventScroll: true });
+  if (targetId) {
+    const target = document.getElementById(targetId);
+    target.setAttribute('aria-describedby', 'report-form-message');
+    target.focus();
+  }
+}
 document.getElementById('simple-report-form').addEventListener('submit', async event => {
   event.preventDefault();
+  document.getElementById('report-form-message').hidden = true;
 
   if (!selectedReportPin) {
-    return toast('กรุณาเลือกตำแหน่งเหตุการณ์ (กดปุ่ม GPS หรือแตะบนแผนที่)');
+    return reportFormError('กรุณาเลือกตำแหน่งเหตุการณ์ โดยกด GPS หรือแตะเลือกบนแผนที่');
   }
 
   const desc = document.getElementById('report-desc').value.trim();
   if (!desc) {
-    return toast('กรุณากรอกรายละเอียดเหตุการณ์');
+    return reportFormError('กรุณากรอกรายละเอียดเหตุการณ์', 'report-desc');
   }
 
   const submitBtn = document.getElementById('submit-report-btn');
@@ -903,7 +1077,7 @@ document.getElementById('simple-report-form').addEventListener('submit', async e
       map.setView([selectedReportPin.lat, selectedReportPin.lng], 15);
     }
   } catch (err) {
-    toast(describeError(err));
+    reportFormError(describeError(err));
   } finally {
     submitBtn.disabled = false;
     submitText.textContent = '🚀 ส่งข้อมูลทันที';
@@ -1000,7 +1174,7 @@ function setGistdaFloodLayer(enabled) {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   } else {
     map.removeLayer(gistdaFloodLayer);
     dot.classList.remove('active');
@@ -1079,10 +1253,12 @@ function updateStaffUi() {
   ribbon.hidden = !staff;
   if (staff && user) {
     btnLabel.textContent = user.app_metadata?.role === 'admin' ? 'ผู้ดูแล' : 'เจ้าหน้าที่';
-    document.getElementById('staff-role-text').textContent = `สิทธิ์ ${user.app_metadata?.role} (${user.email || ''})`;
+    const roleName = user.app_metadata?.role || 'staff';
+    document.getElementById('staff-role-text').textContent = `สิทธิ์ ${roleName} (${user.email || ''})`;
   } else {
     btnLabel.textContent = 'เจ้าหน้าที่';
   }
+  render();
 }
 
 // --- Sync Functions ---
@@ -1108,6 +1284,422 @@ async function syncAssistancePoints() {
     console.error('Sync assistance points failed', err);
   }
 }
+
+// --- Reports Dashboard & Intelligence ---
+function getDistrictForItem(lat, lng, text = '') {
+  for (const d of PRACHINBURI_DISTRICTS) {
+    const raw = d.name.replace('อ.', '');
+    if (text && text.includes(raw)) return d.name;
+  }
+  if (!lat || !lng) return PRACHINBURI_DISTRICTS[0].name;
+  let best = PRACHINBURI_DISTRICTS[0].name;
+  let minDist = Infinity;
+  for (const d of PRACHINBURI_DISTRICTS) {
+    const dist = (lat - d.lat) ** 2 + (lng - d.lng) ** 2;
+    if (dist < minDist) {
+      minDist = dist;
+      best = d.name;
+    }
+  }
+  return best;
+}
+
+function renderReportsDashboard() {
+  const pendingHelp = reports.filter(r => r.type === 'help' && r.status !== 'done');
+  const floodReports = reports.filter(r => r.type === 'flood' && r.status !== 'done');
+  const activeSupport = assistancePoints.filter(p => p.status !== 'closed');
+  const closedSupport = assistancePoints.filter(p => p.status === 'closed');
+  const doneReports = reports.filter(r => r.status === 'done');
+  const totalPeople = reports.reduce((sum, r) => sum + (Number(r.people) || 0), 0);
+
+  // 1. KPI Cards
+  const kpiUrgent = document.getElementById('rep-kpi-urgent');
+  const kpiFlood = document.getElementById('rep-kpi-flood');
+  const kpiSupport = document.getElementById('rep-kpi-support');
+  const kpiClosed = document.getElementById('rep-kpi-closed');
+  const kpiDone = document.getElementById('rep-kpi-done');
+  const kpiPeople = document.getElementById('rep-kpi-people');
+
+  if (kpiUrgent) kpiUrgent.textContent = pendingHelp.length;
+  if (kpiFlood) kpiFlood.textContent = floodReports.length;
+  if (kpiSupport) kpiSupport.textContent = activeSupport.length;
+  if (kpiClosed) kpiClosed.textContent = closedSupport.length;
+  if (kpiDone) kpiDone.textContent = doneReports.length;
+  if (kpiPeople) kpiPeople.textContent = totalPeople.toLocaleString('th-TH');
+
+  // 2. District Breakdown Table
+  const districtTbody = document.getElementById('district-breakdown-tbody');
+  if (districtTbody) {
+    districtTbody.innerHTML = '';
+    let totalU = 0, totalF = 0, totalS = 0, totalC = 0, totalD = 0, grandTotal = 0;
+
+    PRACHINBURI_DISTRICTS.forEach(d => {
+      const urgentInD = pendingHelp.filter(r => getDistrictForItem(r.lat, r.lng, r.description) === d.name).length;
+      const floodInD = floodReports.filter(r => getDistrictForItem(r.lat, r.lng, r.description) === d.name).length;
+      const supportInD = activeSupport.filter(p => getDistrictForItem(p.lat, p.lng, `${p.name} ${p.description}`) === d.name).length;
+      const closedInD = closedSupport.filter(p => getDistrictForItem(p.lat, p.lng, `${p.name} ${p.description}`) === d.name).length;
+      const doneInD = doneReports.filter(r => getDistrictForItem(r.lat, r.lng, r.description) === d.name).length;
+      const dTotal = urgentInD + floodInD + supportInD + closedInD + doneInD;
+
+      totalU += urgentInD;
+      totalF += floodInD;
+      totalS += supportInD;
+      totalC += closedInD;
+      totalD += doneInD;
+      grandTotal += dTotal;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${escapeHtml(d.name)}</strong></td>
+        <td class="text-center">${urgentInD > 0 ? `<span class="badge badge-urgent">${urgentInD}</span>` : '0'}</td>
+        <td class="text-center">${floodInD > 0 ? `<span class="badge badge-report">${floodInD}</span>` : '0'}</td>
+        <td class="text-center">${supportInD > 0 ? `<span class="badge badge-support">${supportInD}</span>` : '0'}</td>
+        <td class="text-center">${closedInD > 0 ? `<span class="badge badge-closed">${closedInD}</span>` : '0'}</td>
+        <td class="text-center">${doneInD > 0 ? `<span class="badge badge-done">${doneInD}</span>` : '0'}</td>
+        <td class="text-center"><strong>${dTotal}</strong></td>
+      `;
+      districtTbody.appendChild(tr);
+    });
+
+    // Summary row
+    const footerTr = document.createElement('tr');
+    footerTr.style.background = 'rgba(255, 255, 255, 0.05)';
+    footerTr.style.fontWeight = 'bold';
+    footerTr.innerHTML = `
+      <td><strong>รวมทั้ง 7 อำเภอ</strong></td>
+      <td class="text-center"><span class="badge badge-urgent">${totalU}</span></td>
+      <td class="text-center"><span class="badge badge-report">${totalF}</span></td>
+      <td class="text-center"><span class="badge badge-support">${totalS}</span></td>
+      <td class="text-center"><span class="badge badge-closed">${totalC}</span></td>
+      <td class="text-center"><span class="badge badge-done">${totalD}</span></td>
+      <td class="text-center" style="font-size:15px; color:var(--vue-green);"><strong>${grandTotal}</strong></td>
+    `;
+    districtTbody.appendChild(footerTr);
+  }
+
+  // 3. Full Log Table
+  renderFullLogTable();
+}
+
+function renderFullLogTable() {
+  const fullLogTbody = document.getElementById('full-log-tbody');
+  if (!fullLogTbody) return;
+
+  const searchQuery = (document.getElementById('report-search-input')?.value || '').trim().toLowerCase();
+  const filterType = document.getElementById('report-type-filter')?.value || 'all';
+
+  const allItems = [];
+
+  // Add reports
+  reports.forEach(r => {
+    allItems.push({
+      id: r.id,
+      kind: 'report',
+      raw: r,
+      createdAt: r.createdAt,
+      type: r.type,
+      status: r.status,
+      description: r.description || '',
+      people: r.people,
+      helpedBy: r.helpedBy,
+      contact: r.contact,
+      lat: r.lat,
+      lng: r.lng,
+      district: getDistrictForItem(r.lat, r.lng, r.description)
+    });
+  });
+
+  // Add assistance points
+  assistancePoints.forEach(p => {
+    allItems.push({
+      id: p.id,
+      kind: 'assistance',
+      raw: p,
+      createdAt: p.createdAt,
+      type: 'assistance',
+      status: p.status,
+      description: `${p.name} - ${p.description || ''}`,
+      people: null,
+      helpedBy: null,
+      contact: null,
+      lat: p.lat,
+      lng: p.lng,
+      district: getDistrictForItem(p.lat, p.lng, `${p.name} ${p.description}`)
+    });
+  });
+
+  // Sort by date descending
+  allItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // Filter
+  const filtered = allItems.filter(item => {
+    // Type filter
+    if (filterType === 'help' && !(item.kind === 'report' && item.type === 'help' && item.status !== 'done')) return false;
+    if (filterType === 'flood' && !(item.kind === 'report' && item.type === 'flood' && item.status !== 'done')) return false;
+    if (filterType === 'sandbag' && !(item.kind === 'assistance' && isSandbagPoint(item.raw) && item.status !== 'closed')) return false;
+    if (filterType === 'assistance' && !(item.kind === 'assistance' && !isSandbagPoint(item.raw) && item.status !== 'closed')) return false;
+    if (filterType === 'closed' && !(item.kind === 'assistance' && item.status === 'closed')) return false;
+    if (filterType === 'done' && !(item.kind === 'report' && item.status === 'done')) return false;
+
+    // Search query
+    if (searchQuery) {
+      const matchText = `${item.description} ${item.district} ${item.helpedBy || ''} ${item.contact || ''}`.toLowerCase();
+      if (!matchText.includes(searchQuery)) return false;
+    }
+    return true;
+  });
+
+  fullLogTbody.innerHTML = '';
+  if (filtered.length === 0) {
+    fullLogTbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:2rem; color:var(--text-muted);">ไม่พบรายการที่ตรงกับเงื่อนไขการค้นหา</td></tr>';
+    return;
+  }
+
+  filtered.forEach(item => {
+    const tr = document.createElement('tr');
+
+    let typeBadgeHtml = '';
+    let statusBadgeHtml = '';
+
+    if (item.kind === 'report') {
+      if (item.status === 'done') {
+        typeBadgeHtml = '<span class="badge badge-done">✓ ช่วยแล้ว</span>';
+        statusBadgeHtml = '<span class="badge badge-done">เสร็จสิ้น</span>';
+      } else if (item.type === 'flood') {
+        typeBadgeHtml = '<span class="badge badge-report">🌊 น้ำท่วม</span>';
+        statusBadgeHtml = '<span class="badge badge-warning">เฝ้าระวัง</span>';
+      } else {
+        typeBadgeHtml = '<span class="badge badge-urgent">🆘 ขอความช่วยเหลือ</span>';
+        statusBadgeHtml = '<span class="badge badge-urgent">รอดำเนินการ</span>';
+      }
+    } else {
+      if (item.status === 'closed') {
+        typeBadgeHtml = '<span class="badge badge-closed">⚫ จุดช่วยเหลือปิด</span>';
+        statusBadgeHtml = '<span class="badge badge-closed">ปิดบริการแล้ว</span>';
+      } else if (isSandbagPoint(item.raw)) {
+        typeBadgeHtml = '<span class="badge badge-sandbag">🟡 รับกระสอบทราย</span>';
+        statusBadgeHtml = `<span class="badge badge-sandbag">${supportStatusNames[item.status] || 'เปิดบริการ'}</span>`;
+      } else {
+        typeBadgeHtml = '<span class="badge badge-support">⌂ จุดช่วยเหลือ</span>';
+        statusBadgeHtml = `<span class="badge badge-support">${supportStatusNames[item.status] || 'เปิดบริการ'}</span>`;
+      }
+    }
+
+    const peopleText = item.people ? `<strong>${item.people}</strong> คน` : '-';
+    const helperText = item.helpedBy ? escapeHtml(item.helpedBy) : (item.contact ? `📞 ${escapeHtml(item.contact)}` : '-');
+
+    tr.innerHTML = `
+      <td style="white-space:nowrap; font-size:12px;">${formatDateTime(item.createdAt)}</td>
+      <td>${typeBadgeHtml}</td>
+      <td>
+        <div style="font-weight:500; font-size:13px;">${escapeHtml(item.description)}</div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">📍 ${escapeHtml(item.district)} (${Number(item.lat).toFixed(4)}, ${Number(item.lng).toFixed(4)})</div>
+      </td>
+      <td class="text-center">${peopleText}</td>
+      <td>${statusBadgeHtml}</td>
+      <td style="font-size:12px;">${helperText}</td>
+      <td>
+        <button type="button" class="btn-mini-action" data-edit-item="${item.kind}-${item.id}">🔍 ดู/แก้ไข</button>
+      </td>
+    `;
+
+    tr.querySelector('[data-edit-item]')?.addEventListener('click', () => {
+      document.getElementById('reports-dashboard-modal').close();
+      focusItemOnMap(item.lat, item.lng, `${item.kind}-${item.id}`);
+      openEventDialog(item.raw, item.kind);
+    });
+
+    fullLogTbody.appendChild(tr);
+  });
+}
+
+function exportReportsToCSV() {
+  const allItems = [];
+  reports.forEach(r => {
+    allItems.push({
+      time: r.createdAt,
+      type: r.status === 'done' ? 'ช่วยเหลือแล้ว' : r.type === 'help' ? 'ขอความช่วยเหลือ' : 'รายงานน้ำท่วม',
+      status: r.status === 'done' ? 'ช่วยเหลือสำเร็จ' : r.status,
+      desc: r.description || '',
+      people: r.people || '',
+      helpedBy: r.helpedBy || '',
+      contact: r.contact || '',
+      lat: r.lat,
+      lng: r.lng,
+      district: getDistrictForItem(r.lat, r.lng, r.description)
+    });
+  });
+
+  assistancePoints.forEach(p => {
+    const isSand = isSandbagPoint(p);
+    allItems.push({
+      time: p.createdAt,
+      type: p.status === 'closed' ? 'จุดช่วยเหลือปิดแล้ว' : isSand ? 'จุดรับกระสอบทราย' : 'จุดช่วยเหลือ/ศูนย์พักพิง',
+      status: p.status === 'closed' ? 'ปิดบริการแล้ว' : (supportStatusNames[p.status] || p.status),
+      desc: `${p.name} - ${p.description || ''}`,
+      people: '',
+      helpedBy: '',
+      contact: '',
+      lat: p.lat,
+      lng: p.lng,
+      district: getDistrictForItem(p.lat, p.lng, `${p.name} ${p.description}`)
+    });
+  });
+
+  allItems.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+
+  const headers = ['ลำดับ', 'วันเวลา', 'ประเภท', 'สถานะ', 'รายละเอียด', 'จำนวนผู้ประสบภัย(คน)', 'ผู้เข้าช่วยเหลือ/หน่วยงาน', 'เบอร์ติดต่อ', 'อำเภอ', 'ละติจูด', 'ลองจิจูด'];
+  const rows = allItems.map((item, index) => [
+    index + 1,
+    `"${item.time ? formatDateTime(item.time) : ''}"`,
+    `"${item.type}"`,
+    `"${item.status}"`,
+    `"${(item.desc || '').replace(/"/g, '""')}"`,
+    item.people || '',
+    `"${(item.helpedBy || '').replace(/"/g, '""')}"`,
+    `"${(item.contact || '').replace(/"/g, '""')}"`,
+    `"${item.district}"`,
+    item.lat,
+    item.lng
+  ]);
+
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `prachinburi-flood-report-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('ส่งออกไฟล์ CSV สำเร็จ');
+}
+
+// --- Reports Dashboard Event Listeners ---
+const reportsModal = document.getElementById('reports-dashboard-modal');
+document.getElementById('reports-dashboard-btn')?.addEventListener('click', () => {
+  renderReportsDashboard();
+  reportsModal.showModal();
+});
+document.getElementById('tab-reports-btn')?.addEventListener('click', () => {
+  renderReportsDashboard();
+  reportsModal.showModal();
+});
+document.getElementById('reports-modal-close')?.addEventListener('click', () => {
+  reportsModal.close();
+});
+
+document.querySelectorAll('.reports-tab-btn[data-report-tab]').forEach(tabBtn => {
+  tabBtn.addEventListener('click', () => {
+    document.querySelectorAll('.reports-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.reports-tab-pane').forEach(p => p.hidden = true);
+    tabBtn.classList.add('active');
+    const targetPane = document.getElementById(`tab-content-${tabBtn.dataset.reportTab}`);
+    if (targetPane) targetPane.hidden = false;
+  });
+});
+
+document.getElementById('report-search-input')?.addEventListener('input', () => {
+  renderFullLogTable();
+});
+document.getElementById('report-type-filter')?.addEventListener('change', () => {
+  renderFullLogTable();
+});
+
+document.getElementById('export-csv-btn')?.addEventListener('click', () => {
+  exportReportsToCSV();
+});
+document.getElementById('print-reports-btn')?.addEventListener('click', () => {
+  window.print();
+});
+
+// --- Quick Links & Related Menus Hub Modal ---
+const quickLinksModal = document.getElementById('quick-links-modal');
+
+function openQuickLinksModal() {
+  if (quickLinksModal) {
+    quickLinksModal.showModal();
+  }
+}
+
+document.getElementById('quick-links-hub-btn')?.addEventListener('click', openQuickLinksModal);
+document.getElementById('tab-links-btn')?.addEventListener('click', openQuickLinksModal);
+document.getElementById('fab-quick-links-btn')?.addEventListener('click', openQuickLinksModal);
+document.getElementById('quick-links-close')?.addEventListener('click', () => {
+  quickLinksModal.close();
+});
+
+document.querySelectorAll('[data-hub-action]').forEach(tile => {
+  tile.addEventListener('click', () => {
+    const action = tile.dataset.hubAction;
+    quickLinksModal?.close();
+
+    switch (action) {
+      case 'live-map':
+        setMobileView('map');
+        map.setView(PRACHINBURI_CENTER, 10);
+        break;
+
+      case 'gistda-layer':
+        setMobileView('map');
+        setGistdaFloodLayer(true);
+        break;
+
+      case 'reports-dashboard':
+        renderReportsDashboard();
+        reportsModal?.showModal();
+        break;
+
+      case 'report-help':
+        openReportModalWithType('help');
+        break;
+
+      case 'report-flood':
+        openReportModalWithType('flood');
+        break;
+
+      case 'filter-sandbag': {
+        const chip = document.querySelector('.filter-chip[data-filter="sandbag"]');
+        if (chip) chip.click();
+        setMobileView('map');
+        break;
+      }
+
+      case 'filter-support': {
+        const chip = document.querySelector('.filter-chip[data-filter="assistance"]');
+        if (chip) chip.click();
+        setMobileView('map');
+        break;
+      }
+
+      case 'filter-closed': {
+        const chip = document.querySelector('.filter-chip[data-filter="closed"]');
+        if (chip) chip.click();
+        setMobileView('map');
+        break;
+      }
+
+      case 'filter-done': {
+        const chip = document.querySelector('.filter-chip[data-filter="done"]');
+        if (chip) chip.click();
+        setMobileView('map');
+        break;
+      }
+
+      default:
+        break;
+    }
+  });
+
+  // Enable keyboard enter/space activation for accessibility
+  tile.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      tile.click();
+    }
+  });
+});
 
 // --- Weather Data ---
 function loadWeather() {
@@ -1189,6 +1781,9 @@ function cacheBustImage(path, timestamp) {
 let toastTimer = null;
 function toast(msg) {
   const node = document.getElementById('toast');
+  // A modal dialog is above every ordinary z-index. Keep feedback in its top layer.
+  const modal = document.querySelector('dialog[open]');
+  (modal || document.body).append(node);
   node.textContent = msg;
   node.classList.add('show');
   clearTimeout(toastTimer);

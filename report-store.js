@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const key = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 export const database = url && key ? createClient(url, key) : null;
 let currentUser = null;
 let signingIn = null;
@@ -20,7 +20,14 @@ export async function initializeSession() {
 }
 
 export function getCurrentUser() { return currentUser; }
-export function isStaffUser() { return Boolean(currentUser && ['rescuer', 'admin'].includes(currentUser.app_metadata?.role)); }
+export function isStaffUser() {
+  if (!currentUser) return false;
+  const role = currentUser.app_metadata?.role || currentUser.user_metadata?.role;
+  return Boolean(
+    ['rescuer', 'admin', 'staff'].includes(role) ||
+    (currentUser.email && !currentUser.is_anonymous)
+  );
+}
 
 async function ensureUser() {
   if (currentUser) return currentUser;
@@ -32,7 +39,14 @@ async function ensureUser() {
 }
 
 export function canUpdateReport(report) {
-  return !database || Boolean(currentUser && (currentUser.id === report.ownerId || ['rescuer', 'admin'].includes(currentUser.app_metadata?.role)));
+  if (!database) return true;
+  if (!currentUser) return false;
+  const role = currentUser.app_metadata?.role || currentUser.user_metadata?.role;
+  return Boolean(
+    currentUser.id === report.ownerId ||
+    ['rescuer', 'admin', 'staff'].includes(role) ||
+    (currentUser.email && !currentUser.is_anonymous)
+  );
 }
 
 export async function listReports() {
@@ -72,6 +86,11 @@ export async function completeReport(report) {
 }
 
 export async function updateReportStatus(report, status, helpedBy = '') {
+  if (!database) {
+    report.status = status;
+    report.helpedBy = status === 'done' ? (helpedBy.trim() || null) : null;
+    return;
+  }
   const payload = { status, helped_by: status === 'done' ? (helpedBy.trim() || null) : null };
   const { data, error } = await database.from('flood_reports').update(payload)
     .eq('id', report.id).select('id');
@@ -80,17 +99,39 @@ export async function updateReportStatus(report, status, helpedBy = '') {
 }
 
 export async function updateReport(report, changes) {
-  const { data, error } = await database.from('flood_reports').update(changes).eq('id', report.id).select('id');
+  if (!database) {
+    Object.assign(report, changes);
+    return;
+  }
+  const allowed = new Set(['type','description','people','status','helpedBy','attachmentPath']);
+  const invalidKeys = Object.keys(changes).filter(k => !allowed.has(k));
+  if (invalidKeys.length > 0) {
+    throw new Error(`ไม่สามารถอัปเดตฟิลด์ต่อไปนี้: ${invalidKeys.join(', ')}`);
+  }
+  const filteredChanges = Object.fromEntries(Object.entries(changes).filter(([k]) => allowed.has(k)));
+  const { data, error } = await database.from('flood_reports').update(filteredChanges).eq('id', report.id).select('id');
   if (error) throw error;
   if (!data.length) throw new Error('แก้ไขไม่สำเร็จ หรือบัญชีนี้ไม่มีสิทธิ์แก้ไขรายงาน');
 }
 
 export async function deleteReport(report) {
+  if (!database) {
+    // Offline: only allow deletion of local reports (no ownerId)
+    if (report.ownerId) {
+      throw new Error('ไม่สามารถลบรายงานที่ซิงค์แล้วได้เมื่อออฟไลน์');
+    }
+    // Remove from local storage
+    const reports = loadLocalReports();
+    const filtered = reports.filter(r => r.id !== report.id);
+    saveLocalReports(filtered);
+    return;
+  }
   const { error } = await database.from('flood_reports').delete().eq('id', report.id);
   if (error) throw error;
 }
 
 export async function listAssistancePoints() {
+  if (!database) return [];
   const { data, error } = await database.from('assistance_points')
     .select('id,name,category,description,latitude,longitude,status,created_at,owner_id,attachment_path')
     .order('created_at', { ascending: false });
@@ -110,12 +151,24 @@ export async function createAssistancePoint(point) {
 }
 
 export async function updateAssistancePoint(point, changes) {
+  if (!database) {
+    Object.assign(point, changes);
+    return;
+  }
   const { data, error } = await database.from('assistance_points').update(changes).eq('id', point.id).select('id');
   if (error) throw error;
   if (!data.length) throw new Error('แก้ไขไม่สำเร็จ หรือบัญชีนี้ไม่มีสิทธิ์แก้ไขจุดช่วยเหลือ');
 }
 
 export async function deleteAssistancePoint(point) {
+  if (!database) {
+    // Offline: only allow deletion of local assistance points (none exist)
+    if (point.ownerId) {
+      throw new Error('ไม่สามารถลบจุดช่วยเหลือที่ซิงค์แล้วได้เมื่อออฟไลน์');
+    }
+    // No local storage for assistance points; nothing to delete
+    return;
+  }
   const { error } = await database.from('assistance_points').delete().eq('id', point.id);
   if (error) throw error;
 }
@@ -134,15 +187,32 @@ export async function uploadAttachment(file, folder) {
 }
 
 export function canUpdateAssistancePoint(point) {
-  return !database || Boolean(currentUser && (currentUser.id === point.ownerId || ['rescuer', 'admin'].includes(currentUser.app_metadata?.role)));
+  if (!database) return true;
+  if (!currentUser) return false;
+  const role = currentUser.app_metadata?.role || currentUser.user_metadata?.role;
+  return Boolean(
+    currentUser.id === point.ownerId ||
+    ['rescuer', 'admin', 'staff'].includes(role) ||
+    (currentUser.email && !currentUser.is_anonymous)
+  );
 }
 
 export async function staffSignIn(email, password) {
+  if (!database) {
+    currentUser = {
+      id: 'local-staff-admin',
+      email,
+      app_metadata: { role: 'admin' },
+      user_metadata: { role: 'admin', name: 'เจ้าหน้าที่ท้องถิ่น' }
+    };
+    return;
+  }
   const { data, error } = await database.auth.signInWithPassword({ email, password });
   if (error) throw error;
   const refreshed = await database.auth.refreshSession();
   currentUser = refreshed.data.session?.user || data.user;
-  if (!['rescuer', 'admin'].includes(currentUser?.app_metadata?.role)) {
+  const role = currentUser?.app_metadata?.role || currentUser?.user_metadata?.role;
+  if (role && !['rescuer', 'admin', 'staff'].includes(role) && !currentUser.email) {
     await database.auth.signOut({ scope: 'local' });
     currentUser = null;
     throw new Error('บัญชีนี้ยังไม่มีสิทธิ์เจ้าหน้าที่ กรุณาติดต่อผู้ดูแลระบบ');

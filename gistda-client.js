@@ -1,7 +1,9 @@
 (function (root) {
   const endpoint = 'https://api-gateway.gistda.or.th/api/2.0/resources/dragonfly/flood-checks';
+    let cache = { timestamp: 0, data: null, apiKey: null };
+    const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-  function parseChecks(payload) {
+    function parseChecks(payload) {
     if ([401, 403, 407].includes(Number(payload?.status))) {
       throw new Error('กรุณาตรวจสอบ API key และสิทธิ์ใช้งาน Dragonfly');
     }
@@ -19,16 +21,23 @@
 
   async function fetchChecks(apiKey, fetcher = fetch) {
     if (!apiKey?.trim()) throw new Error('เพิ่ม GISTDA API key ก่อนตรวจสอบข้อมูล');
+    const key = apiKey.trim();
+    const now = Date.now();
+    if (cache.data && cache.apiKey === key && now - cache.timestamp < CACHE_TTL) {
+      return cache.data;
+    }
     const url = new URL(endpoint);
     // GISTDA Gateway documents api_key as a query parameter.
-    url.searchParams.set('api_key', apiKey.trim());
+    url.searchParams.set('api_key', key);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetcher(url.toString(), { signal: controller.signal, cache: 'no-store', referrerPolicy: 'no-referrer' });
       if ([401, 403, 407].includes(response.status)) throw new Error('กรุณาตรวจสอบ API key และสิทธิ์ใช้งาน Dragonfly');
       if (!response.ok) throw new Error(`บริการ GISTDA ตอบกลับ HTTP ${response.status}`);
-      return parseChecks(await response.json());
+      const result = parseChecks(await response.json());
+      cache = { timestamp: now, data: result, apiKey: key };
+      return result;
     } catch (error) {
       if (error.name === 'AbortError') throw new Error('บริการ GISTDA ใช้เวลาตอบกลับนานเกินไป ลองใหม่อีกครั้ง');
       if (error instanceof TypeError) throw new Error('เชื่อมต่อ GISTDA ไม่สำเร็จ โปรดตรวจสอบเครือข่ายหรือข้อจำกัด CORS');
