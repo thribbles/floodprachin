@@ -57,6 +57,9 @@
       <button type="button" class="mobile-tab" id="tab-reports-btn" role="tab" aria-selected="false">
         <span>📊</span> สรุปรายงาน
       </button>
+      <button type="button" class="mobile-tab" id="tab-news-btn" role="tab" aria-selected="false">
+        <span>📰</span> ข่าวสาร
+      </button>
       <button type="button" class="mobile-tab" id="tab-links-btn" role="tab" aria-selected="false">
         <span>🔗</span> เมนูเชื่อมโยง
       </button>
@@ -64,6 +67,11 @@
 
     <!-- Header Tools -->
     <div class="header-tools">
+      <button type="button" id="news-page-btn" class="header-nav-button" title="ข่าวสารและประกาศ">
+        <span class="nav-btn-icon">📰</span>
+        <span class="nav-btn-text">ข่าวสาร</span>
+      </button>
+
       <button type="button" id="quick-links-hub-btn" class="header-nav-button" title="ศูนย์รวมเมนูและจุดเชื่อมโยงข้อมูล">
         <span class="nav-btn-icon">🔗</span>
         <span class="nav-btn-text">เมนูเชื่อมโยง</span>
@@ -114,26 +122,19 @@
           <span class="feed-counter" id="feed-count-total">0 รายการ</span>
         </div>
 
-        <!-- Filter Chips (Color-coded: Red, Blue, Green, Yellow, Black/Grey) -->
-        <div class="filter-bar" role="tablist" aria-label="ตัวกรองรายงาน">
-          <button type="button" class="filter-chip active" data-filter="all">
-            ทั้งหมด <span class="chip-num" id="filter-all-num">0</span>
+        <!-- Filter Controls -->
+        <div class="filter-controls-row">
+          <button type="button" class="sos-filter-btn" id="sos-filter-btn" data-filter="help">
+            <span class="pulse-ring"></span>
+            🆘 <span class="desktop-only">ขอความช่วยเหลือ</span> (<span id="filter-help-num-badge">0</span>)
           </button>
-          <button type="button" class="filter-chip chip-urgent" data-filter="help">
-            <span class="dot-urgent"></span> ขอความช่วยเหลือ <span class="chip-num" id="filter-help-num">0</span>
-          </button>
-          <button type="button" class="filter-chip chip-report" data-filter="flood">
-            <span class="dot-report"></span> รายงานน้ำท่วม <span class="chip-num" id="filter-flood-num">0</span>
-          </button>
-          <button type="button" class="filter-chip chip-sandbag" data-filter="sandbag">
-            <span class="dot-sandbag"></span> รับกระสอบทราย <span class="chip-num" id="filter-sandbag-num">0</span>
-          </button>
-          <button type="button" class="filter-chip chip-support" data-filter="assistance">
-            <span class="dot-support"></span> จุดช่วยเหลือ <span class="chip-num" id="filter-support-num">0</span>
-          </button>
-          <button type="button" class="filter-chip chip-done" data-filter="done">
-            <span class="dot-done"></span> ช่วยแล้ว/ปิด <span class="chip-num" id="filter-done-num">0</span>
-          </button>
+          <select id="feed-filter-select" class="select-input feed-filter-dropdown">
+            <option value="all" id="opt-all">ทั้งหมด (0)</option>
+            <option value="flood" id="opt-flood">🌊 รายงานน้ำท่วม (0)</option>
+            <option value="sandbag" id="opt-sandbag">🟡 รับกระสอบทราย (0)</option>
+            <option value="assistance" id="opt-support">⌂ จุดช่วยเหลือ (0)</option>
+            <option value="done" id="opt-done">✓ ช่วยแล้ว/ปิด (0)</option>
+          </select>
         </div>
       </div>
 
@@ -186,11 +187,7 @@
           <span class="tool-icon">📍</span>
           <span class="tool-label">ตำแหน่งของฉัน</span>
         </button>
-        <button type="button" id="gistda-layer-btn" class="map-tool-btn" title="เปิด/ปิด ชั้นข้อมูลน้ำท่วม GISTDA">
-          <span class="tool-icon">🛰️</span>
-          <span class="tool-label">ดาวเทียม GISTDA</span>
-          <span class="status-indicator" id="gistda-status-dot"></span>
-        </button>
+
       </div>
 
       <!-- Map Legend -->
@@ -329,14 +326,20 @@
 
           <div class="photo-upload-wrap">
             <label class="photo-upload-label" for="report-photo-input">
-              <span class="upload-icon">📷</span>
-              <span class="upload-text">ถ่ายภาพ หรือเลือกรูปภาพประกอบ (ถ้ามี)</span>
-              <span class="upload-hint">ไฟล์ JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB</span>
+              <span class="upload-icon">📸</span>
+              <span class="upload-text">แนบรูป (สูงสุด 4 รูป) หรือ วิดีโอสั้น (ไม่เกิน 10 วิ)</span>
+              <span class="upload-hint">ภาพ JPG/PNG (10MB), วิดีโอ MP4/MOV (20MB)</span>
             </label>
-            <input type="file" id="report-photo-input" class="hidden-file-input" accept="image/jpeg,image/png,image/webp">
-            <div id="photo-preview-wrap" class="photo-preview-wrap" hidden>
-              <img id="photo-preview-img" src="" alt="ตัวอย่างรูปภาพ" class="photo-preview-img">
-              <button type="button" id="remove-photo-btn" class="remove-photo-btn" title="ยกเลิกรูปภาพ">✕</button>
+            <input type="file" id="report-photo-input" class="hidden-file-input" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime">
+            <div id="photo-preview-wrap" class="photo-preview-grid" hidden>
+              <!-- Previews injected here -->
+            </div>
+          </div>
+
+          <div class="input-grid" style="margin-top: 12px; margin-bottom: -12px;">
+            <div style="grid-column: 1 / -1;">
+              <label class="field-label" for="report-video-link">หรือแนบลิงก์วิดีโอ <small>(YouTube, FB, Google Drive)</small></label>
+              <input type="url" id="report-video-link" class="text-input" placeholder="https://..." maxlength="255">
             </div>
           </div>
 
@@ -379,8 +382,13 @@
       </div>
 
       <div class="event-body">
-        <div id="event-image-container" class="event-image-container" hidden>
-          <img id="event-img" src="" alt="ภาพถ่ายสถานที่เกิดเหตุ" class="event-full-img">
+        <div id="event-media-container" class="event-media-container" hidden>
+          <!-- Media injected here -->
+        </div>
+        <div id="event-video-link-container" hidden style="margin-bottom:12px;">
+          <a id="event-video-link" href="#" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="display:block;text-align:center;padding:10px;background:var(--bg-layer-2);border-radius:8px;color:var(--text-main);text-decoration:none;border:1px solid var(--border-color);">
+            🎥 เปิดดูคลิปวิดีโอ / ลิงก์แนบ
+          </a>
         </div>
 
         <div class="event-desc-box">
@@ -389,6 +397,22 @@
 
         <div class="event-meta-grid" id="event-meta-grid">
           <!-- Meta items injected dynamically -->
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:12px; margin-bottom: 8px;">
+          <button type="button" id="event-navigate-btn" class="btn-secondary" style="flex:1; padding:10px;">
+            🧭 นำทาง (Google Maps)
+          </button>
+          <button type="button" id="event-share-btn" class="btn-secondary" style="flex:1; padding:10px;">
+            📤 แชร์ / คัดลอก
+          </button>
+        </div>
+
+        <div style="margin-bottom: 8px; text-align: center;">
+          <input type="file" id="event-update-photo-input" class="hidden-file-input" accept="image/jpeg,image/png,image/webp">
+          <button type="button" id="event-update-time-btn" class="btn-secondary" style="width: 100%; padding: 10px; border-color: var(--color-done); color: var(--color-done);">
+            🔄 อัพเดทวันเวลาล่าสุด (พร้อมรูปภาพใหม่)
+          </button>
         </div>
 
         <!-- Quick Call Link if available -->
@@ -418,6 +442,7 @@
                 <select id="admin-status-select" class="select-input">
                   <option value="pending">รอความช่วยเหลือ</option>
                   <option value="done">✓ ช่วยเหลือเรียบร้อยแล้ว</option>
+                  <option value="closed_verify">⚫ ปิด / รอตรวจสอบใหม่</option>
                 </select>
               </div>
             </div>
@@ -472,6 +497,7 @@
                   <option value="unavailable">🟡 ไม่มีของ / พักชั่วคราว</option>
                   <option value="depleted">🟠 ของหมดแล้ว</option>
                   <option value="closed">⚫ ช่วยแล้ว / ปิดบริการ</option>
+                  <option value="closed_verify">⚫ ปิด / รอตรวจสอบใหม่</option>
                 </select>
               </div>
             </div>
@@ -698,6 +724,24 @@
     </div>
   </dialog>
 
+  <!-- ==================== NEWS MODAL (FACEBOOK PLUGIN) ==================== -->
+  <dialog id="news-modal" class="app-modal modal-wide">
+    <div class="modal-card" style="height: 90vh;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <span class="modal-eyebrow" style="color: var(--vue-green);">NEWS & UPDATES</span>
+          <h3>📰 ข่าวสารและประกาศจาก Facebook</h3>
+          <p class="modal-subtitle">ติดตามสถานการณ์ ข่าวสารล่าสุดจากหน่วยงาน</p>
+        </div>
+        <button type="button" id="news-modal-close" class="modal-close-btn" aria-label="ปิด">✕</button>
+      </div>
+      <div class="news-body" style="padding: 16px; overflow-y: auto; height: calc(100% - 80px); display: flex; justify-content: center; background: #fff;">
+        <!-- Facebook Page Plugin iframe (Placeholder: PR.Prachinburi) -->
+        <iframe src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2FPR.Prachinburi&tabs=timeline&width=500&height=800&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=false&appId" width="500" height="800" style="border:none;overflow:hidden; max-width: 100%;" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>
+      </div>
+    </div>
+  </dialog>
+
   <!-- ==================== QUICK LINKS & RELATED MENUS HUB MODAL ==================== -->
   <dialog id="quick-links-modal" class="app-modal modal-wide">
     <div class="modal-card">
@@ -723,14 +767,7 @@
             <span class="tile-arrow">➔</span>
           </div>
 
-          <div class="quick-nav-tile" role="button" tabindex="0" data-hub-action="gistda-layer">
-            <span class="tile-icon">🛰️</span>
-            <div class="tile-text">
-              <strong>ดาวเทียมน้ำท่วม GISTDA</strong>
-              <small>เปิด/ปิด ชั้นข้อมูลภาพถ่ายดาวเทียมตรวจวัดพื้นที่น้ำท่วม</small>
-            </div>
-            <span class="tile-arrow">➔</span>
-          </div>
+
 
           <div class="quick-nav-tile" role="button" tabindex="0" data-hub-action="google-flood">
             <span class="tile-icon">🌊</span>

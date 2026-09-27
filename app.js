@@ -17,7 +17,8 @@ import {
   uploadAttachment,
   staffSignIn,
   staffSignOut,
-  describeError
+  describeError,
+  subscribeToRealtime
 } from './report-store.js';
 
 // --- Constants & Config ---
@@ -59,9 +60,21 @@ function isSandbagPoint(item) {
 const supportStatusNames = {
   available: 'มีของ / พร้อมรับรอง',
   closed: 'ช่วยเหลือแล้ว / ปิดบริการ',
+  closed_verify: 'ปิด / รอตรวจสอบใหม่',
   unavailable: 'ปิดชั่วคราว',
   depleted: 'ของหมดแล้ว'
 };
+
+function apply48hTimeout(items) {
+  const now = Date.now();
+  items.forEach(item => {
+    if (item.status === 'done' || item.status === 'closed') return;
+    const createdAt = new Date(item.createdAt).getTime();
+    if (now - createdAt > 48 * 3600 * 1000) {
+      item.status = 'closed_verify';
+    }
+  });
+}
 
 // --- State Variables ---
 let reports = loadLocalReports();
@@ -161,6 +174,9 @@ function createMarkerIcon(item, kind) {
     if (item.status === 'done') {
       colorClass = 'done';
       iconEmoji = '✓';
+    } else if (item.status === 'closed_verify') {
+      colorClass = 'closed';
+      iconEmoji = '❓';
     } else if (item.type === 'flood') {
       colorClass = 'report'; // รายงานน้ำท่วม = สีน้ำเงิน
       iconEmoji = '🌊';
@@ -169,7 +185,7 @@ function createMarkerIcon(item, kind) {
       iconEmoji = '🆘';
     }
   } else {
-    if (item.status === 'closed') {
+    if (item.status === 'closed' || item.status === 'closed_verify') {
       colorClass = 'closed'; // ช่วยเหลือแล้ว / ปิด = สีดำ
       iconEmoji = '⚫';
     } else if (isSandbagPoint(item)) {
@@ -181,13 +197,20 @@ function createMarkerIcon(item, kind) {
     }
   }
 
-  const thumbHtml = item.attachmentPath
-    ? `<img src="${cacheBustImage(item.attachmentPath, item.createdAt)}" alt="รูป" class="marker-avatar-thumb">`
-    : `<span class="marker-inner-icon">${iconEmoji}</span>`;
+  let thumbHtml = `<span class="marker-inner-icon">${iconEmoji}</span>`;
+  if (item.attachmentPath) {
+    const firstUrl = item.attachmentPath.split(',')[0];
+    const isVideo = firstUrl.match(/\.(mp4|webm|mov)$/i) || (!firstUrl.match(/\.(jpg|jpeg|png|webp)$/i) && firstUrl.startsWith('http') && !firstUrl.includes('supabase.co'));
+    if (isVideo) {
+      thumbHtml = `<div class="marker-avatar-thumb" style="background:var(--bg-layer-2);display:flex;align-items:center;justify-content:center;font-size:16px;">🎥</div>`;
+    } else {
+      thumbHtml = `<img src="${cacheBustImage(firstUrl, item.createdAt)}" alt="รูป" class="marker-avatar-thumb">`;
+    }
+  }
 
-  const pulseHtml = (kind === 'report' && item.status !== 'done')
+  const pulseHtml = (kind === 'report' && item.status !== 'done' && item.status !== 'closed_verify')
     ? `<span class="marker-ring-pulse ${colorClass}"></span>`
-    : (kind === 'assistance' && item.status !== 'closed')
+    : (kind === 'assistance' && item.status !== 'closed' && item.status !== 'closed_verify')
       ? `<span class="marker-ring-pulse ${colorClass}"></span>`
       : '';
 
@@ -288,12 +311,15 @@ function setReportLocation(lat, lng) {
 
 // --- Render Feed and Map Markers ---
 function render() {
-  const pendingHelp = reports.filter(r => r.type === 'help' && r.status !== 'done').length;
-  const floodCount = reports.filter(r => r.type === 'flood' && r.status !== 'done').length;
-  const sandbagCount = assistancePoints.filter(p => isSandbagPoint(p) && p.status !== 'closed').length;
-  const closedSupportCount = assistancePoints.filter(p => p.status === 'closed').length;
-  const activeSupportCount = assistancePoints.filter(p => p.status !== 'closed').length;
-  const doneCount = reports.filter(r => r.status === 'done').length + closedSupportCount;
+  apply48hTimeout(reports);
+  apply48hTimeout(assistancePoints);
+
+  const pendingHelp = reports.filter(r => r.type === 'help' && r.status !== 'done' && r.status !== 'closed_verify').length;
+  const floodCount = reports.filter(r => r.type === 'flood' && r.status !== 'done' && r.status !== 'closed_verify').length;
+  const sandbagCount = assistancePoints.filter(p => isSandbagPoint(p) && p.status !== 'closed' && p.status !== 'closed_verify').length;
+  const closedSupportCount = assistancePoints.filter(p => p.status === 'closed' || p.status === 'closed_verify').length;
+  const activeSupportCount = assistancePoints.filter(p => p.status !== 'closed' && p.status !== 'closed_verify').length;
+  const doneCount = reports.filter(r => r.status === 'done' || r.status === 'closed_verify').length + closedSupportCount;
   const supportCount = activeSupportCount;
   const totalCount = reports.length + assistancePoints.length;
 
@@ -303,13 +329,23 @@ function render() {
   document.getElementById('stat-done').textContent = doneCount;
   document.getElementById('stat-support').textContent = supportCount;
 
-  document.getElementById('filter-all-num').textContent = totalCount;
-  document.getElementById('filter-help-num').textContent = pendingHelp;
-  document.getElementById('filter-flood-num').textContent = floodCount;
-  const filterSandbagNum = document.getElementById('filter-sandbag-num');
-  if (filterSandbagNum) filterSandbagNum.textContent = sandbagCount;
-  document.getElementById('filter-done-num').textContent = doneCount;
-  document.getElementById('filter-support-num').textContent = supportCount;
+  const helpBadge = document.getElementById('filter-help-num-badge');
+  if (helpBadge) helpBadge.textContent = pendingHelp;
+  
+  const optAll = document.getElementById('opt-all');
+  if (optAll) optAll.textContent = `ทั้งหมด (${totalCount})`;
+  
+  const optFlood = document.getElementById('opt-flood');
+  if (optFlood) optFlood.textContent = `🌊 รายงานน้ำท่วม (${floodCount})`;
+  
+  const optSandbag = document.getElementById('opt-sandbag');
+  if (optSandbag) optSandbag.textContent = `🟡 รับกระสอบทราย (${sandbagCount})`;
+  
+  const optSupport = document.getElementById('opt-support');
+  if (optSupport) optSupport.textContent = `⌂ จุดช่วยเหลือ (${supportCount})`;
+  
+  const optDone = document.getElementById('opt-done');
+  if (optDone) optDone.textContent = `✓ ช่วยแล้ว/ปิด (${doneCount})`;
 
   document.getElementById('feed-count-total').textContent = `${totalCount} รายการ`;
   document.getElementById('mobile-badge').textContent = totalCount;
@@ -340,7 +376,7 @@ function render() {
   // 1. Render Flood & Help Reports
   reports.forEach(report => {
     const isHelp = report.type === 'help';
-    const isDone = report.status === 'done';
+    const isDone = report.status === 'done' || report.status === 'closed_verify';
 
     let shouldShow = false;
     if (currentFilter === 'all') shouldShow = true;
@@ -350,10 +386,35 @@ function render() {
 
     // Add marker to map
     if (isInsideProvince(report.lat, report.lng)) {
+      const isStaff = isStaffUser();
       const marker = L.marker([report.lat, report.lng], {
         icon: createMarkerIcon(report, 'report'),
-        zIndexOffset: isHelp && !isDone ? 2000 : 1000
+        zIndexOffset: isHelp && !isDone ? 2000 : 1000,
+        draggable: isStaff
       });
+      if (isStaff) {
+        marker.on('dragend', async (e) => {
+          const newPos = e.target.getLatLng();
+          if (!isInsideProvince(newPos.lat, newPos.lng)) {
+            toast('หมุดอยู่นอกเขตปราจีนบุรี จะไม่ถูกบันทึก');
+            e.target.setLatLng([report.lat, report.lng]);
+            return;
+          }
+          try {
+            if (database) {
+              await updateReport(report, { lat: newPos.lat, lng: newPos.lng });
+            } else {
+              report.lat = newPos.lat;
+              report.lng = newPos.lng;
+              saveLocalReports();
+            }
+            toast('ย้ายตำแหน่งรายงานสำเร็จ');
+          } catch (err) {
+            toast(describeError(err));
+            e.target.setLatLng([report.lat, report.lng]);
+          }
+        });
+      }
 
       marker.bindPopup(`
         <div style="font-family:'IBM Plex Sans Thai',sans-serif; min-width:200px; padding:2px;">
@@ -396,7 +457,7 @@ function render() {
 
     let thumbHtml = '';
     if (report.attachmentPath) {
-      thumbHtml = `<img src="${cacheBustImage(report.attachmentPath, report.createdAt)}" alt="รูป" class="feed-card-thumb" loading="lazy">`;
+      thumbHtml = getMediaThumbHtml(report.attachmentPath, report.createdAt);
     } else {
       const icon = isDone ? '✓' : isHelp ? '🆘' : '🌊';
       thumbHtml = `<div class="feed-card-icon-placeholder">${icon}</div>`;
@@ -442,7 +503,7 @@ function render() {
   // 2. Render Assistance Points
   if (currentFilter === 'all' || currentFilter === 'assistance' || currentFilter === 'sandbag' || currentFilter === 'done') {
     assistancePoints.forEach(point => {
-      const isClosedPoint = point.status === 'closed';
+      const isClosedPoint = point.status === 'closed' || point.status === 'closed_verify';
       const isSandbag = isSandbagPoint(point);
 
       if (currentFilter === 'done' && !isClosedPoint) return;
@@ -452,10 +513,34 @@ function render() {
 
       // Marker
       if (isInsideProvince(point.lat, point.lng)) {
+        const isStaff = isStaffUser();
         const marker = L.marker([point.lat, point.lng], {
           icon: createMarkerIcon(point, 'assistance'),
-          zIndexOffset: 1200
+          zIndexOffset: 1200,
+          draggable: isStaff
         });
+        if (isStaff) {
+          marker.on('dragend', async (e) => {
+            const newPos = e.target.getLatLng();
+            if (!isInsideProvince(newPos.lat, newPos.lng)) {
+              toast('หมุดอยู่นอกเขตปราจีนบุรี จะไม่ถูกบันทึก');
+              e.target.setLatLng([point.lat, point.lng]);
+              return;
+            }
+            try {
+              if (database) {
+                await updateAssistancePoint(point, { lat: newPos.lat, lng: newPos.lng });
+              } else {
+                point.lat = newPos.lat;
+                point.lng = newPos.lng;
+              }
+              toast('ย้ายตำแหน่งจุดช่วยเหลือสำเร็จ');
+            } catch (err) {
+              toast(describeError(err));
+              e.target.setLatLng([point.lat, point.lng]);
+            }
+          });
+        }
 
         const accentColor = isClosedPoint ? '#475569' : isSandbag ? '#f59e0b' : '#42b883';
         const iconChar = isClosedPoint ? '⚫' : isSandbag ? '🟡' : '⌂';
@@ -492,7 +577,7 @@ function render() {
       const iconChar = isClosedPoint ? '⚫' : isSandbag ? '🟡' : '⌂';
       let thumbHtml = '';
       if (point.attachmentPath) {
-        thumbHtml = `<img src="${cacheBustImage(point.attachmentPath, point.createdAt)}" alt="รูป" class="feed-card-thumb" loading="lazy">`;
+        thumbHtml = getMediaThumbHtml(point.attachmentPath, point.createdAt);
       } else {
         thumbHtml = `<div class="feed-card-icon-placeholder">${iconChar}</div>`;
       }
@@ -563,14 +648,12 @@ function openEventDialog(item, kind) {
   activeEventType = kind;
 
   const dialog = document.getElementById('event-dialog');
-  const imgContainer = document.getElementById('event-image-container');
-  const img = document.getElementById('event-img');
-  const statusBadge = document.getElementById('event-status-badge');
-  const callRow = document.getElementById('event-call-row');
-  const metaGrid = document.getElementById('event-meta-grid');
   const adminSection = document.getElementById('event-admin-section');
   const adminReportControls = document.getElementById('admin-report-controls');
   const adminSupportControls = document.getElementById('admin-support-controls');
+  const statusBadge = document.getElementById('event-status-badge');
+  const callRow = document.getElementById('event-call-row');
+  const metaGrid = document.getElementById('event-meta-grid');
 
   if (kind === 'report') {
     document.getElementById('event-eyebrow').textContent = item.type === 'help' ? 'เหตุฉุกเฉิน / ขอความช่วยเหลือ' : 'รายงานสถานการณ์น้ำท่วม';
@@ -646,14 +729,8 @@ function openEventDialog(item, kind) {
     }
   }
 
-  // Image handling
-  if (item.attachmentPath) {
-    imgContainer.hidden = false;
-    img.src = cacheBustImage(item.attachmentPath, item.createdAt);
-  } else {
-    imgContainer.hidden = true;
-    img.src = '';
-  }
+  // Image / Media handling
+  renderEventMedia(item.attachmentPath, item.createdAt);
 
   dialog.showModal();
 }
@@ -778,6 +855,48 @@ document.getElementById('event-view-map-btn').addEventListener('click', () => {
   }
 });
 
+document.getElementById('event-update-time-btn')?.addEventListener('click', () => {
+  document.getElementById('event-update-photo-input')?.click();
+});
+
+document.getElementById('event-update-photo-input')?.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file || !activeEventItem) return;
+
+  const btn = document.getElementById('event-update-time-btn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังอัพเดท...';
+  
+  try {
+    let attachmentPath = activeEventItem.attachmentPath;
+    if (database) {
+      const folder = activeEventType === 'assistance' ? 'assistance' : 'reports';
+      attachmentPath = await uploadAttachment(file, folder);
+    }
+    const changes = {
+      createdAt: new Date().toISOString(),
+      attachmentPath: attachmentPath,
+      status: activeEventType === 'assistance' ? 'available' : 'pending'
+    };
+    
+    if (activeEventType === 'assistance') {
+      await updateAssistancePoint(activeEventItem, changes);
+      await syncAssistancePoints();
+    } else {
+      await updateReport(activeEventItem, changes);
+      await syncReports();
+    }
+    toast('อัพเดทวันเวลาล่าสุดและรูปภาพเรียบร้อย');
+    document.getElementById('event-dialog').close();
+  } catch (err) {
+    toast(describeError(err));
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔄 อัพเดทวันเวลาล่าสุด (พร้อมรูปภาพใหม่)';
+    e.target.value = '';
+  }
+});
+
 // Event Dialog Related Links Hub Buttons
 document.getElementById('ev-link-map')?.addEventListener('click', () => {
   if (activeEventItem) {
@@ -798,15 +917,13 @@ document.getElementById('ev-link-district-report')?.addEventListener('click', ()
 
 document.getElementById('ev-link-sandbag')?.addEventListener('click', () => {
   document.getElementById('event-dialog').close();
-  const chip = document.querySelector('.filter-chip[data-filter="sandbag"]');
-  if (chip) chip.click();
+  applyFilter('sandbag');
   toast('แสดงเฉพาะจุดรับกระสอบทราย');
 });
 
 document.getElementById('ev-link-shelter')?.addEventListener('click', () => {
   document.getElementById('event-dialog').close();
-  const chip = document.querySelector('.filter-chip[data-filter="assistance"]');
-  if (chip) chip.click();
+  applyFilter('assistance');
   toast('แสดงจุดช่วยเหลือและศูนย์พักพิง');
 });
 
@@ -818,10 +935,40 @@ document.getElementById('ev-link-add-here')?.addEventListener('click', () => {
   }
 });
 
+document.getElementById('event-navigate-btn')?.addEventListener('click', () => {
+  if (activeEventItem) {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${activeEventItem.lat},${activeEventItem.lng}`;
+    window.open(url, '_blank');
+  }
+});
+
+document.getElementById('event-share-btn')?.addEventListener('click', async () => {
+  if (activeEventItem) {
+    const title = activeEventType === 'report' ? typeNames[activeEventItem.type] : activeEventItem.name;
+    const url = `https://maps.google.com/?q=${activeEventItem.lat},${activeEventItem.lng}`;
+    const text = `[น้ำท่วมปราจีน69] ${title}\nพิกัด: ${Number(activeEventItem.lat).toFixed(5)}, ${Number(activeEventItem.lng).toFixed(5)}\nรายละเอียด: ${activeEventItem.description || '-'}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'น้ำท่วมปราจีน69', text, url });
+      } catch (err) {
+        console.error('Share failed', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${text}\n${url}`);
+        toast('คัดลอกข้อมูลและลิงก์เรียบร้อย นำไปวางในโซเชียลได้เลย');
+      } catch {
+        toast(`พิกัด: ${Number(activeEventItem.lat).toFixed(5)}, ${Number(activeEventItem.lng).toFixed(5)}`);
+      }
+    }
+  }
+});
+
 document.getElementById('ev-link-copy-share')?.addEventListener('click', async () => {
   if (activeEventItem) {
     const title = activeEventType === 'report' ? typeNames[activeEventItem.type] : activeEventItem.name;
-    const shareText = `[น้ำท่วมปราจีน69.] ${title} - พิกัด: ${Number(activeEventItem.lat).toFixed(5)}, ${Number(activeEventItem.lng).toFixed(5)} https://maps.google.com/?q=${activeEventItem.lat},${activeEventItem.lng}`;
+    const shareText = `[น้ำท่วมปราจีน69] ${title} - พิกัด: ${Number(activeEventItem.lat).toFixed(5)}, ${Number(activeEventItem.lng).toFixed(5)} https://maps.google.com/?q=${activeEventItem.lat},${activeEventItem.lng}`;
     try {
       await navigator.clipboard.writeText(shareText);
       toast('คัดลอกลิงก์และพิกัดเหตุการณ์เรียบร้อย');
@@ -880,8 +1027,7 @@ document.querySelectorAll('.fab-btn[data-open-type]').forEach(btn => {
 document.querySelectorAll('.stat-metric[data-stat-filter]').forEach(card => {
   card.addEventListener('click', () => {
     const filter = card.dataset.statFilter;
-    const chip = document.querySelector(`.filter-chip[data-filter="${filter}"]`);
-    if (chip) chip.click();
+    applyFilter(card.dataset.statFilter);
   });
 });
 
@@ -890,7 +1036,7 @@ document.getElementById('report-modal-close').addEventListener('click', () => {
 });
 
 // Close dialog on clicking backdrop outside card
-['report-modal', 'event-dialog', 'staff-modal', 'reports-dashboard-modal', 'quick-links-modal'].forEach(id => {
+['report-modal', 'event-dialog', 'staff-modal', 'reports-dashboard-modal', 'quick-links-modal', 'news-modal'].forEach(id => {
   const dialog = document.getElementById(id);
   if (dialog) {
     dialog.addEventListener('click', event => {
@@ -909,28 +1055,74 @@ document.querySelectorAll('.type-card').forEach(btn => {
 // Photo selection & preview
 const photoInput = document.getElementById('report-photo-input');
 const photoPreviewWrap = document.getElementById('photo-preview-wrap');
-const photoPreviewImg = document.getElementById('photo-preview-img');
-const removePhotoBtn = document.getElementById('remove-photo-btn');
+let filesToUpload = [];
 
 photoInput.addEventListener('change', () => {
-  const file = photoInput.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) {
-    toast('ไฟล์ภาพต้องมีขนาดไม่เกิน 5 MB');
+  const newFiles = Array.from(photoInput.files);
+  if (filesToUpload.length + newFiles.length > 4) {
+    toast('เลือกไฟล์ได้สูงสุด 4 ไฟล์เท่านั้น');
     photoInput.value = '';
     return;
   }
-  photoFileToUpload = file;
-  photoPreviewImg.src = URL.createObjectURL(file);
-  photoPreviewWrap.hidden = false;
+
+  // Validate files
+  for (const file of newFiles) {
+    const isVideo = file.type.startsWith('video/');
+    const maxSize = isVideo ? 20 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast(`ไฟล์ ${file.name} มีขนาดเกินกำหนด`);
+      photoInput.value = '';
+      return;
+    }
+    
+    if (isVideo) {
+      // Check video duration
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = function() {
+        window.URL.revokeObjectURL(video.src);
+        if (video.duration > 11) {
+          toast(`วิดีโอ ${file.name} มีความยาวเกิน 10 วินาที`);
+          filesToUpload = filesToUpload.filter(f => f !== file);
+          renderPreviews();
+        }
+      };
+      video.src = URL.createObjectURL(file);
+    }
+  }
+
+  filesToUpload.push(...newFiles);
+  photoInput.value = '';
+  renderPreviews();
 });
 
-removePhotoBtn.addEventListener('click', () => {
-  photoFileToUpload = null;
-  photoInput.value = '';
-  photoPreviewWrap.hidden = true;
-  photoPreviewImg.src = '';
-});
+function renderPreviews() {
+  photoPreviewWrap.innerHTML = '';
+  if (filesToUpload.length === 0) {
+    photoPreviewWrap.hidden = true;
+    return;
+  }
+  photoPreviewWrap.hidden = false;
+  filesToUpload.forEach((file, index) => {
+    const item = document.createElement('div');
+    item.className = 'preview-item';
+    const isVideo = file.type.startsWith('video/');
+    const url = URL.createObjectURL(file);
+    if (isVideo) {
+      item.innerHTML = `<video src="${url}" muted autoplay loop playsinline></video><button type="button" class="remove-btn" data-index="${index}">✕</button>`;
+    } else {
+      item.innerHTML = `<img src="${url}"><button type="button" class="remove-btn" data-index="${index}">✕</button>`;
+    }
+    photoPreviewWrap.appendChild(item);
+  });
+  photoPreviewWrap.querySelectorAll('.remove-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const idx = parseInt(e.target.dataset.index);
+      filesToUpload.splice(idx, 1);
+      renderPreviews();
+    });
+  });
+}
 
 // GPS button inside modal
 document.getElementById('modal-gps-btn').addEventListener('click', () => {
@@ -1004,12 +1196,17 @@ document.getElementById('simple-report-form').addEventListener('submit', async e
   spinner.hidden = false;
 
   try {
-    let attachmentPath = '';
-    if (photoFileToUpload && database) {
-      attachmentPath = await uploadAttachment(
-        photoFileToUpload,
-        selectedType === 'assistance' ? 'assistance' : 'reports'
-      );
+    let attachmentPaths = [];
+    if (filesToUpload.length > 0 && database) {
+      const folder = selectedType === 'assistance' ? 'assistance' : 'reports';
+      const uploads = filesToUpload.map(f => uploadAttachment(f, folder));
+      attachmentPaths = await Promise.all(uploads);
+    }
+    let attachmentPath = attachmentPaths.join(',');
+
+    const videoLink = document.getElementById('report-video-link')?.value.trim();
+    if (videoLink) {
+      attachmentPath = attachmentPath ? `${attachmentPath},${videoLink}` : videoLink;
     }
 
     if (selectedType === 'assistance') {
@@ -1064,8 +1261,8 @@ document.getElementById('simple-report-form').addEventListener('submit', async e
 
     // Reset Form & Pin
     document.getElementById('simple-report-form').reset();
-    photoFileToUpload = null;
-    photoPreviewWrap.hidden = true;
+    filesToUpload = [];
+    renderPreviews();
     selectedReportPin = null;
     pinLayer.clearLayers();
     document.getElementById('loc-status-text').textContent = 'ยังไม่ได้เลือกตำแหน่ง';
@@ -1087,14 +1284,28 @@ document.getElementById('simple-report-form').addEventListener('submit', async e
   }
 });
 
-// --- Filter Chips Click Handlers ---
-document.querySelectorAll('.filter-chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    currentFilter = chip.dataset.filter;
-    render();
-  });
+// --- Filter Controls Click & Change Handlers ---
+function applyFilter(filter) {
+  currentFilter = filter;
+  const select = document.getElementById('feed-filter-select');
+  const sosBtn = document.getElementById('sos-filter-btn');
+  
+  if (filter === 'help') {
+    if (sosBtn) sosBtn.classList.add('active');
+    if (select) select.value = 'all'; // Default dropdown back when SOS is active
+  } else {
+    if (sosBtn) sosBtn.classList.remove('active');
+    if (select) select.value = filter === 'closed' ? 'done' : filter;
+  }
+  render();
+}
+
+document.getElementById('sos-filter-btn')?.addEventListener('click', () => {
+  applyFilter('help');
+});
+
+document.getElementById('feed-filter-select')?.addEventListener('change', (e) => {
+  applyFilter(e.target.value);
 });
 
 // --- Mobile Tab Switcher ---
@@ -1134,16 +1345,13 @@ document.getElementById('locate-me-btn').addEventListener('click', () => {
   );
 });
 
-// GISTDA Layer Toggle
-document.getElementById('gistda-layer-btn').addEventListener('click', () => {
-  setGistdaFloodLayer(!gistdaFloodLayerEnabled);
-});
+// Auto-load GISTDA Layer on startup
+setTimeout(() => setGistdaFloodLayer(true), 1500);
 
 async function setGistdaFloodLayer(enabled) {
-  const dot = document.getElementById('gistda-status-dot');
   const activeKey = getGistdaApiKey();
   if (!activeKey) {
-    toast('ยังไม่ได้ระบุ GISTDA API key');
+    console.warn('ยังไม่ได้ระบุ GISTDA API key');
     return;
   }
 
@@ -1151,28 +1359,39 @@ async function setGistdaFloodLayer(enabled) {
   gistdaFloodLayerEnabled = enabled;
 
   if (enabled) {
-    dot.classList.add('active');
 
     if (!gistdaFloodLayer) {
       gistdaLoading = true;
       toast('🛰️ กำลังดึงข้อมูลพื้นที่น้ำท่วมจากดาวเทียม GISTDA...');
       try {
         let features = [];
-        let periodName = '3 วันล่าสุด';
+        let periodName = '1 วันล่าสุด';
 
-        // Try 3days first for Prachinburi (pv_idn=25)
-        const res3 = await fetch(`https://api-gateway.gistda.or.th/api/2.0/resources/features/flood/3days?api_key=${encodeURIComponent(activeKey)}&pv_idn=25&limit=400`);
-        if (res3.ok) {
-          const data3 = await res3.json();
-          if (Array.isArray(data3?.features) && data3.features.length > 0) {
-            features = data3.features;
+        // Try 1day first for Prachinburi (pv_idn=25)
+        const res1 = await fetch(`https://api-gateway.gistda.or.th/api/2.0/resources/features/flood/1day?api_key=${encodeURIComponent(activeKey)}&pv_idn=25&limit=5000`);
+        if (res1.ok) {
+          const data1 = await res1.json();
+          if (Array.isArray(data1?.features) && data1.features.length > 0) {
+            features = data1.features;
+          }
+        }
+
+        // Fallback to 3days if 1day has 0 features
+        if (features.length === 0) {
+          periodName = '3 วันล่าสุด';
+          const res3 = await fetch(`https://api-gateway.gistda.or.th/api/2.0/resources/features/flood/3days?api_key=${encodeURIComponent(activeKey)}&pv_idn=25&limit=5000`);
+          if (res3.ok) {
+            const data3 = await res3.json();
+            if (Array.isArray(data3?.features) && data3.features.length > 0) {
+              features = data3.features;
+            }
           }
         }
 
         // Fallback to 7days if 3days has 0 features
         if (features.length === 0) {
           periodName = '7 วันล่าสุด';
-          const res7 = await fetch(`https://api-gateway.gistda.or.th/api/2.0/resources/features/flood/7days?api_key=${encodeURIComponent(activeKey)}&pv_idn=25&limit=400`);
+          const res7 = await fetch(`https://api-gateway.gistda.or.th/api/2.0/resources/features/flood/7days?api_key=${encodeURIComponent(activeKey)}&pv_idn=25&limit=5000`);
           if (res7.ok) {
             const data7 = await res7.json();
             if (Array.isArray(data7?.features) && data7.features.length > 0) {
@@ -1218,7 +1437,6 @@ async function setGistdaFloodLayer(enabled) {
       } catch (err) {
         console.error('GISTDA Layer Error:', err);
         toast('โหลดข้อมูลดาวเทียมไม่สำเร็จ: ' + (err.message || ''));
-        dot.classList.remove('active');
         gistdaFloodLayerEnabled = false;
         gistdaLoading = false;
         return;
@@ -1248,8 +1466,6 @@ async function setGistdaFloodLayer(enabled) {
     if (gistdaFloodLayer && map.hasLayer(gistdaFloodLayer)) {
       map.removeLayer(gistdaFloodLayer);
     }
-    dot.classList.remove('active');
-    toast('ปิดชั้นข้อมูลน้ำท่วม GISTDA');
   }
 }
 
@@ -1338,6 +1554,7 @@ async function syncReports() {
   syncing = true;
   try {
     reports = await listReports();
+    apply48hTimeout(reports);
     render();
   } catch (err) {
     console.error('Sync reports failed', err);
@@ -1350,6 +1567,7 @@ async function syncAssistancePoints() {
   if (!database) return;
   try {
     assistancePoints = await listAssistancePoints();
+    apply48hTimeout(assistancePoints);
     render();
   } catch (err) {
     console.error('Sync assistance points failed', err);
@@ -1737,29 +1955,25 @@ document.querySelectorAll('[data-hub-action]').forEach(tile => {
         break;
 
       case 'filter-sandbag': {
-        const chip = document.querySelector('.filter-chip[data-filter="sandbag"]');
-        if (chip) chip.click();
+        applyFilter('sandbag');
         setMobileView('map');
         break;
       }
 
       case 'filter-support': {
-        const chip = document.querySelector('.filter-chip[data-filter="assistance"]');
-        if (chip) chip.click();
+        applyFilter('assistance');
         setMobileView('map');
         break;
       }
 
       case 'filter-closed': {
-        const chip = document.querySelector('.filter-chip[data-filter="closed"]');
-        if (chip) chip.click();
+        applyFilter('closed');
         setMobileView('map');
         break;
       }
 
       case 'filter-done': {
-        const chip = document.querySelector('.filter-chip[data-filter="done"]');
-        if (chip) chip.click();
+        applyFilter('done');
         setMobileView('map');
         break;
       }
@@ -1890,13 +2104,13 @@ async function initApp() {
       console.error('Init session error', err);
     }
 
-    // 30s auto background refresh
-    setInterval(() => {
-      if (!document.hidden) {
+    // Subscribe to realtime database changes instead of polling
+    subscribeToRealtime(() => {
+      if (!syncing && !document.hidden) {
         syncReports();
         syncAssistancePoints();
       }
-    }, 30000);
+    });
 
     window.addEventListener('focus', () => {
       syncReports();
@@ -1910,3 +2124,73 @@ async function initApp() {
 }
 
 initApp();
+
+// --- Media Rendering Helpers ---
+function getMediaThumbHtml(attachmentPath, createdAt) {
+  if (!attachmentPath) return '';
+  const firstUrl = attachmentPath.split(',')[0];
+  const isVideoExt = firstUrl.match(/\.(mp4|webm|mov)$/i);
+  const isExtLink = firstUrl.startsWith('http') && !firstUrl.includes('supabase.co') && !firstUrl.match(/\.(jpg|jpeg|png|webp)$/i);
+  
+  if (isVideoExt) {
+    return `<video src="${firstUrl}" class="feed-card-thumb" muted autoplay loop playsinline style="object-fit:cover;"></video>`;
+  } else if (isExtLink) {
+    return `<div class="feed-card-thumb" style="display:flex;align-items:center;justify-content:center;background:var(--bg-layer-2);font-size:24px;">🎥</div>`;
+  } else {
+    return `<img src="${cacheBustImage(firstUrl, createdAt)}" alt="รูป" class="feed-card-thumb" loading="lazy">`;
+  }
+}
+
+function renderEventMedia(attachmentPath, createdAt) {
+  const mediaContainer = document.getElementById('event-media-container');
+  const linkContainer = document.getElementById('event-video-link-container');
+  const linkAnchor = document.getElementById('event-video-link');
+  
+  mediaContainer.innerHTML = '';
+  mediaContainer.hidden = true;
+  linkContainer.hidden = true;
+
+  if (!attachmentPath) return;
+
+  const urls = attachmentPath.split(',');
+  let hasVisualMedia = false;
+
+  urls.forEach(url => {
+    const isVideoExt = url.match(/\.(mp4|webm|mov)$/i);
+    const isExtLink = url.startsWith('http') && !url.includes('supabase.co') && !url.match(/\.(jpg|jpeg|png|webp)$/i);
+    
+    if (isExtLink && !isVideoExt) {
+      linkContainer.hidden = false;
+      linkAnchor.href = url;
+    } else if (isVideoExt) {
+      hasVisualMedia = true;
+      const vid = document.createElement('video');
+      vid.className = 'event-media-item';
+      vid.src = url;
+      vid.controls = true;
+      mediaContainer.appendChild(vid);
+    } else {
+      hasVisualMedia = true;
+      const img = document.createElement('img');
+      img.className = 'event-media-item';
+      img.src = cacheBustImage(url, createdAt);
+      mediaContainer.appendChild(img);
+    }
+  });
+
+  if (hasVisualMedia) {
+    mediaContainer.hidden = false;
+  }
+}
+
+// --- News Modal ---
+const newsModal = document.getElementById('news-modal');
+document.getElementById('news-page-btn')?.addEventListener('click', () => {
+  newsModal?.showModal();
+});
+document.getElementById('tab-news-btn')?.addEventListener('click', () => {
+  newsModal?.showModal();
+});
+document.getElementById('news-modal-close')?.addEventListener('click', () => {
+  newsModal?.close();
+});

@@ -113,7 +113,7 @@ export async function updateReport(report, changes) {
     Object.assign(report, changes);
     return;
   }
-  const allowed = new Set(['type', 'description', 'people', 'status', 'helpedBy', 'attachmentPath']);
+  const allowed = new Set(['type', 'description', 'people', 'status', 'helpedBy', 'attachmentPath', 'createdAt', 'lat', 'lng']);
   const invalidKeys = Object.keys(changes).filter(k => !allowed.has(k));
   if (invalidKeys.length > 0) {
     throw new Error(`ไม่สามารถอัปเดตฟิลด์ต่อไปนี้: ${invalidKeys.join(', ')}`);
@@ -125,6 +125,9 @@ export async function updateReport(report, changes) {
   if ('status' in changes) payload.status = changes.status;
   if ('helpedBy' in changes) payload.helped_by = changes.helpedBy ? (changes.helpedBy.trim() || null) : null;
   if ('attachmentPath' in changes) payload.attachment_path = changes.attachmentPath || null;
+  if ('createdAt' in changes) payload.created_at = changes.createdAt;
+  if ('lat' in changes) payload.latitude = changes.lat;
+  if ('lng' in changes) payload.longitude = changes.lng;
 
   const { data, error } = await database.from('flood_reports').update(payload).eq('id', report.id).select('id');
   if (error) throw error;
@@ -181,6 +184,9 @@ export async function updateAssistancePoint(point, changes) {
   if ('status' in changes) payload.status = changes.status;
   if ('description' in changes) payload.description = changes.description;
   if ('attachmentPath' in changes) payload.attachment_path = changes.attachmentPath || null;
+  if ('createdAt' in changes) payload.created_at = changes.createdAt;
+  if ('lat' in changes) payload.latitude = changes.lat;
+  if ('lng' in changes) payload.longitude = changes.lng;
   const { data, error } = await database.from('assistance_points').update(payload).eq('id', point.id).select('id');
   if (error) throw error;
   if (!data.length) throw new Error('แก้ไขไม่สำเร็จ หรือบัญชีนี้ไม่มีสิทธิ์แก้ไขจุดช่วยเหลือ');
@@ -203,10 +209,15 @@ export async function deleteAssistancePoint(point) {
 
 export async function uploadAttachment(file, folder) {
   if (!file) return '';
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error('แนบได้เฉพาะไฟล์ JPG, PNG หรือ WebP');
-  if (file.size > 5 * 1024 * 1024) throw new Error('รูปภาพต้องมีขนาดไม่เกิน 5 MB');
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime'];
+  if (!validTypes.includes(file.type)) throw new Error('แนบได้เฉพาะไฟล์ภาพ หรือวิดีโอ (MP4, WebM, MOV)');
+  
+  const isVideo = file.type.startsWith('video/');
+  const maxSize = isVideo ? 20 * 1024 * 1024 : 10 * 1024 * 1024; // 20MB for video, 10MB for image
+  if (file.size > maxSize) throw new Error(`ไฟล์${isVideo ? 'วิดีโอ' : 'ภาพ'}ต้องมีขนาดไม่เกิน ${isVideo ? '20' : '10'} MB`);
+  
   if (database) await ensureUser();
-  const extension = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+  const extension = file.type.split('/')[1] || 'jpg';
   const path = `${folder}/${crypto.randomUUID()}.${extension}`;
   const { error } = await database.storage.from('flood-attachments').upload(path, file, { contentType: file.type, upsert: false });
   if (error) throw error;
@@ -262,4 +273,14 @@ export function describeError(error) {
   if (error?.code === '42501') return 'บัญชีนี้ไม่มีสิทธิ์ทำรายการ';
   if (error?.message?.includes('Failed to fetch')) return 'เชื่อมต่อฐานข้อมูลไม่ได้ กรุณาลองใหม่';
   return error?.message || 'บันทึกไม่สำเร็จ กรุณาลองใหม่';
+}
+
+export function subscribeToRealtime(callback) {
+  if (!database) return;
+  database.channel('public-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'flood_reports' }, () => callback())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'assistance_points' }, () => callback())
+    .subscribe((status) => {
+      console.log('Realtime DB subscription status:', status);
+    });
 }
