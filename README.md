@@ -2,7 +2,7 @@
 
 น้ำท่วมปราจีน69 เป็นเว็บแอปภาษาไทยสำหรับปักหมุดรายงานเหตุ ขอความช่วยเหลือ และติดตามสถานะในจังหวัดปราจีนบุรี
 
-เว็บ: https://phuengpha-flood.vercel.app
+เว็บ: https://prachin-flood69.vercel.app/
 
 Vercel: `thribbles-projects/phuengpha-flood` · Supabase: `phuengpha-flood-db` (`gvisknrxegtdwxvnwqou`) · Region Singapore · Free plan
 
