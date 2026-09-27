@@ -107,6 +107,7 @@
       <span id="staff-role-text">กำลังตรวจสอบสิทธิ์…</span>
     </div>
     <div class="staff-ribbon-actions">
+      <button type="button" id="staff-news-btn" class="ribbon-btn" style="background: #2563eb; color: #fff; font-weight: 600;">📰 จัดการ/ใส่ข่าวสาร</button>
       <button type="button" id="staff-refresh-btn" class="ribbon-btn">🔄 รีเฟรชข้อมูล</button>
       <button type="button" id="staff-logout-btn" class="ribbon-btn danger">ออกจากระบบ</button>
     </div>
@@ -724,18 +725,48 @@
     </div>
   </dialog>
 
-  <!-- ==================== NEWS MODAL (FACEBOOK PLUGIN) ==================== -->
+  <!-- ==================== NEWS MODAL (FACEBOOK PLUGIN & ANNOUNCEMENTS) ==================== -->
   <dialog id="news-modal" class="app-modal modal-wide">
     <div class="modal-card" style="height: 90vh;">
       <div class="modal-header">
         <div class="modal-title-wrap">
           <span class="modal-eyebrow" style="color: var(--vue-green);">NEWS & UPDATES</span>
-          <h3>📰 ข่าวสารและประกาศจาก Facebook</h3>
-          <p class="modal-subtitle">ติดตามสถานการณ์ ข่าวสารล่าสุดจากหน่วยงาน</p>
+          <h3>📰 ข่าวสารและประกาศเตือนภัย</h3>
+          <p class="modal-subtitle">รวมข่าวสารสถานการณ์ ประกาศจากเพจทางการ และเจ้าหน้าที่</p>
         </div>
         <button type="button" id="news-modal-close" class="modal-close-btn" aria-label="ปิด">✕</button>
       </div>
       <div class="news-body" style="padding: 16px; overflow-y: auto; height: calc(100% - 80px); background: #f8fafc;">
+        <!-- Staff Only Add News Form -->
+        <div id="staff-news-panel" class="staff-news-panel" hidden style="background: #ffffff; border: 1.5px solid #3b82f6; border-radius: 12px; padding: 16px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 20px;">📢</span>
+              <strong style="font-size: 15px; color: #1e40af;">ใส่ข่าวสาร / ประกาศด่วน (สำหรับเจ้าหน้าที่)</strong>
+            </div>
+            <span class="badge badge-staff">เฉพาะเจ้าหน้าที่</span>
+          </div>
+          <form id="add-news-form" style="display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <label for="news-input-title" style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">หัวข้อข่าว / ข้อความประกาศ *</label>
+              <input type="text" id="news-input-title" required placeholder="เช่น แจ้งเตือนระดับน้ำ อ.กบินทร์บุรี หรือ แจ้งเส้นทางเลี่ยง" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            <div>
+              <label for="news-input-url" style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">ลิงก์ Facebook หรือเว็บไซต์ข่าว *</label>
+              <input type="url" id="news-input-url" required placeholder="https://www.facebook.com/..." style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            <div>
+              <label for="news-input-source" style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">หน่วยงาน / แหล่งที่มา (ไม่บังคับ)</label>
+              <input type="text" id="news-input-source" placeholder="เช่น เพจ ปภ.ปราจีนบุรี หรือ สวท.ปราจีนบุรี" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+              <button type="submit" id="news-submit-btn" style="background: #2563eb; color: #ffffff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <span>➕ บันทึกและโพสต์ข่าว</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
         <div id="news-list-container" style="display: flex; flex-direction: column; gap: 12px;">
           <!-- News list will be rendered here -->
         </div>

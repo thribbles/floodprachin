@@ -18,7 +18,10 @@ import {
   staffSignIn,
   staffSignOut,
   describeError,
-  subscribeToRealtime
+  subscribeToRealtime,
+  getNewsList,
+  addNewsItem,
+  deleteNewsItem
 } from './report-store.js';
 
 // --- Constants & Config ---
@@ -1538,6 +1541,10 @@ function updateStaffUi() {
   const btnLabel = document.getElementById('staff-btn-label');
 
   ribbon.hidden = !staff;
+  const staffNewsPanel = document.getElementById('staff-news-panel');
+  if (staffNewsPanel) {
+    staffNewsPanel.hidden = !staff;
+  }
   if (staff && user) {
     btnLabel.textContent = user.app_metadata?.role === 'admin' ? 'ผู้ดูแล' : 'เจ้าหน้าที่';
     const roleName = user.app_metadata?.role || 'staff';
@@ -2183,44 +2190,133 @@ function renderEventMedia(attachmentPath, createdAt) {
   }
 }
 
-// --- News Modal ---
+// --- News Modal & Staff Management ---
 const newsModal = document.getElementById('news-modal');
+const staffNewsPanel = document.getElementById('staff-news-panel');
 
-// ข่าวสารแบบกำหนดเอง - เพิ่มลิงก์และหัวข้อข่าวที่นี่ (เอาลิ้งมาแปะในนี้ได้เลย)
-const manualNewsList = [
-  { 
-    title: 'ตัวอย่างข่าว: ประกาศเตือนภัยระดับน้ำแม่น้ำปราจีนบุรี', 
-    url: 'https://facebook.com/PR.Prachinburi', 
-    date: '27 ก.ย. 2026' 
-  },
-  // { title: 'ข่าวต่อไป...', url: '...', date: '...' }
-];
-
-function renderNewsList() {
+async function renderNewsList() {
   const container = document.getElementById('news-list-container');
   if (!container) return;
-  container.innerHTML = '';
-  
-  if (manualNewsList.length === 0) {
-    container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">ยังไม่มีประกาศข่าวสาร</div>';
-    return;
+
+  const isStaff = isStaffUser();
+  if (staffNewsPanel) {
+    staffNewsPanel.hidden = !isStaff;
   }
-  
-  manualNewsList.forEach(news => {
-    const item = document.createElement('a');
-    item.href = news.url;
-    item.target = '_blank';
-    item.style.cssText = 'display: block; padding: 16px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-decoration: none; color: inherit; transition: transform 0.2s;';
-    item.onmouseover = () => item.style.transform = 'translateY(-2px)';
-    item.onmouseout = () => item.style.transform = 'none';
-    
-    item.innerHTML = `
-      <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">${news.title}</div>
-      <div style="font-size: 12px; color: #64748b;">${news.date}</div>
-    `;
-    container.appendChild(item);
-  });
+
+  container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">กำลังโหลดข่าวสาร…</div>';
+
+  try {
+    const list = await getNewsList();
+    container.innerHTML = '';
+
+    if (!list || list.length === 0) {
+      container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 24px; background: #fff; border-radius: 8px;">ยังไม่มีประกาศข่าวสาร</div>';
+      return;
+    }
+
+    list.forEach(news => {
+      const item = document.createElement('div');
+      item.className = 'news-card-item';
+      item.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: all 0.2s;';
+      
+      const createdDate = news.created_at ? new Date(news.created_at).toLocaleDateString('th-TH', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      }) : (news.date || 'ล่าสุด');
+
+      item.innerHTML = `
+        <div style="flex: 1; min-width: 0;">
+          <a href="${news.url}" target="_blank" rel="noopener noreferrer" style="font-weight: 600; font-size: 15px; color: #1e293b; text-decoration: none; display: flex; align-items: baseline; gap: 6px; line-height: 1.4; margin-bottom: 6px;">
+            <span>${escapeHtml(news.title)}</span>
+            <span style="font-size: 12px; color: #3b82f6; flex-shrink: 0;">↗</span>
+          </a>
+          <div style="font-size: 12px; color: #64748b; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+            <span>🏢 ${escapeHtml(news.source || 'เพจข่าว')}</span>
+            <span>•</span>
+            <span>🕒 ${createdDate}</span>
+          </div>
+        </div>
+        ${isStaff ? `
+          <button type="button" class="btn-delete-news" data-id="${news.id}" title="ลบข่าวนี้" style="flex-shrink: 0; background: #fee2e2; color: #dc2626; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+            <span>🗑️ ลบ</span>
+          </button>
+        ` : `
+          <a href="${news.url}" target="_blank" rel="noopener noreferrer" style="flex-shrink: 0; background: #eff6ff; color: #2563eb; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; text-decoration: none;">
+            เปิดอ่าน ↗
+          </a>
+        `}
+      `;
+
+      item.onmouseover = () => { item.style.boxShadow = '0 4px 8px -2px rgba(0,0,0,0.1)'; };
+      item.onmouseout = () => { item.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)'; };
+
+      container.appendChild(item);
+    });
+
+    if (isStaff) {
+      container.querySelectorAll('.btn-delete-news').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const id = btn.getAttribute('data-id');
+          if (confirm('คุณต้องการลบประกาศข่าวนี้ใช่หรือไม่?')) {
+            btn.disabled = true;
+            btn.textContent = 'กำลังลบ…';
+            try {
+              await deleteNewsItem(id);
+              toast('ลบข่าวสารเรียบร้อย');
+              await renderNewsList();
+            } catch (err) {
+              toast(describeError(err));
+            }
+          }
+        });
+      });
+    }
+  } catch (e) {
+    console.error(e);
+    container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">ไม่สามารถโหลดข่าวสารได้</div>';
+  }
 }
+
+// Add News Form Submit Handler
+document.getElementById('add-news-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('news-submit-btn');
+  const titleInput = document.getElementById('news-input-title');
+  const urlInput = document.getElementById('news-input-url');
+  const sourceInput = document.getElementById('news-input-source');
+
+  const title = titleInput.value.trim();
+  const url = urlInput.value.trim();
+  const source = sourceInput.value.trim();
+
+  if (!title || !url) return;
+
+  btn.disabled = true;
+  btn.textContent = 'กำลังบันทึก…';
+
+  try {
+    await addNewsItem({ title, url, source });
+    titleInput.value = '';
+    urlInput.value = '';
+    sourceInput.value = '';
+    toast('โพสต์ข่าวสารสำเร็จเรียบร้อย 🎉');
+    await renderNewsList();
+  } catch (err) {
+    toast(describeError(err));
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>➕ บันทึกและโพสต์ข่าว</span>';
+  }
+});
+
+// Staff Ribbon News Button
+document.getElementById('staff-news-btn')?.addEventListener('click', () => {
+  renderNewsList();
+  newsModal?.showModal();
+  setTimeout(() => {
+    document.getElementById('news-input-title')?.focus();
+  }, 150);
+});
 
 document.getElementById('news-page-btn')?.addEventListener('click', () => {
   renderNewsList();
@@ -2233,3 +2329,4 @@ document.getElementById('tab-news-btn')?.addEventListener('click', () => {
 document.getElementById('news-modal-close')?.addEventListener('click', () => {
   newsModal?.close();
 });
+

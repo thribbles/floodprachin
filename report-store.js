@@ -280,7 +280,87 @@ export function subscribeToRealtime(callback) {
   database.channel('public-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'flood_reports' }, () => callback())
     .on('postgres_changes', { event: '*', schema: 'public', table: 'assistance_points' }, () => callback())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'news_updates' }, () => callback())
     .subscribe((status) => {
       console.log('Realtime DB subscription status:', status);
     });
 }
+
+export async function getNewsList() {
+  if (database) {
+    try {
+      const { data, error } = await database
+        .from('news_updates')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && Array.isArray(data)) {
+        localStorage.setItem('cached_news_items', JSON.stringify(data));
+        return data;
+      }
+    } catch (e) {
+      console.warn('Could not fetch from news_updates table:', e);
+    }
+  }
+  try {
+    const cached = localStorage.getItem('cached_news_items');
+    if (cached) return JSON.parse(cached);
+  } catch (e) {}
+  return [
+    {
+      id: 'default-1',
+      title: 'ประกาศเตือนภัยระดับน้ำแม่น้ำปราจีนบุรีและพื้นที่ลุ่มต่ำ',
+      url: 'https://facebook.com/PR.Prachinburi',
+      source: 'สำนักงานประชาสัมพันธ์จังหวัดปราจีนบุรี',
+      created_at: new Date().toISOString()
+    }
+  ];
+}
+
+export async function addNewsItem({ title, url, source }) {
+  const item = {
+    title: title.trim(),
+    url: url.trim(),
+    source: (source || 'เจ้าหน้าที่').trim(),
+    created_at: new Date().toISOString()
+  };
+  if (database) {
+    try {
+      const { data, error } = await database
+        .from('news_updates')
+        .insert([item])
+        .select();
+      if (!error && data?.[0]) {
+        return data[0];
+      }
+    } catch (e) {
+      console.warn('Supabase insert news error (fallback to local):', e);
+    }
+  }
+  const localId = 'local-' + Date.now();
+  const newItem = { ...item, id: localId };
+  let cached = [];
+  try {
+    cached = JSON.parse(localStorage.getItem('cached_news_items') || '[]');
+  } catch (e) {}
+  const updated = [newItem, ...cached.filter(x => x.id !== localId)];
+  localStorage.setItem('cached_news_items', JSON.stringify(updated));
+  return newItem;
+}
+
+export async function deleteNewsItem(id) {
+  if (database && !String(id).startsWith('local-') && !String(id).startsWith('default-')) {
+    try {
+      await database.from('news_updates').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Supabase delete news error:', e);
+    }
+  }
+  let cached = [];
+  try {
+    cached = JSON.parse(localStorage.getItem('cached_news_items') || '[]');
+  } catch (e) {}
+  const updated = cached.filter(x => String(x.id) !== String(id));
+  localStorage.setItem('cached_news_items', JSON.stringify(updated));
+  return true;
+}
+
