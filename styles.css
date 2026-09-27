@@ -2360,3 +2360,146 @@ html[data-theme="dark"] .leaflet-tile-pane {
 @media (max-width: 480px) {
   .sos-filter-btn .desktop-only { display: none; }
 }
+
+/* ==========================================================================
+   Hotline Directory Styles (รวมเบอร์โทรฉุกเฉิน & กู้ภัย)
+   ========================================================================== */
+.hotline-chip {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-family: var(--font-thai);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.hotline-chip:hover,
+.hotline-chip.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.hotline-group-card {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.hotline-group-header {
+  padding: 10px 14px;
+  background: rgba(30, 41, 59, 0.25);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hotline-group-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hotline-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+
+.hotline-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  gap: 10px;
+}
+
+.hotline-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.hotline-item-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-main);
+  line-height: 1.35;
+}
+
+.hotline-item-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.hotline-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.hotline-call-btn {
+  background: #10b981;
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.hotline-call-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.hotline-call-btn.urgent {
+  background: #ef4444;
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.35);
+}
+
+.hotline-call-btn.urgent:hover {
+  background: #dc2626;
+}
+
+.hotline-call-btn.secondary {
+  background: #3b82f6;
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.35);
+}
+
+.hotline-call-btn.secondary:hover {
+  background: #2563eb;
+}
+
+.hotline-call-btn.line {
+  background: #06c755;
+  box-shadow: 0 1px 3px rgba(6, 199, 85, 0.35);
+}
+
+.hotline-call-btn.line:hover {
+  background: #05b04c;
+}
+

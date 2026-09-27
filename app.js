@@ -1944,6 +1944,10 @@ document.querySelectorAll('[data-hub-action]').forEach(tile => {
     quickLinksModal?.close();
 
     switch (action) {
+      case 'hotlines':
+        openHotlineModal();
+        break;
+
       case 'live-map':
         setMobileView('map');
         map.setView(PRACHINBURI_CENTER, 10);
@@ -2412,5 +2416,265 @@ document.getElementById('brand-logo-btn')?.addEventListener('click', (e) => {
   e.preventDefault();
   window.location.reload();
 });
+
+// ==========================================================================
+// EMERGENCY HOTLINES & DIRECTORY (สายด่วน & รวมเบอร์โทรฉุกเฉิน จ.ปราจีนบุรี)
+// ==========================================================================
+const hotlineModal = document.getElementById('hotline-modal');
+
+const HOTLINE_DATA = [
+  {
+    category: 'main',
+    title: '⚡ สายด่วนหลัก • โทรฟรี 24 ชั่วโมง / ใช้ได้ทุกอำเภอ',
+    badge: 'สายด่วนฟรี 24 ชม.',
+    badgeClass: 'urgent',
+    items: [
+      { name: 'น้ำท่วม / ขอความช่วยเหลือ / อพยพ (ปภ.)', phone: '1784', note: 'กรมป้องกันและบรรเทาสาธารณภัย (โทรฟรี 24 ชม.)', isMain: true },
+      { name: 'เจ็บป่วยฉุกเฉิน / รถพยาบาล', phone: '1669', note: 'ศูนย์นเรนทร / กู้ชีพฉุกเฉิน (โทรฟรี 24 ชม.)', isMain: true },
+      { name: 'ตำรวจ (เหตุด่วนเหตุร้าย)', phone: '191', note: 'แจ้งเหตุด่วนเหตุร้ายตลอด 24 ชั่วโมง', isMain: true },
+      { name: 'ดับเพลิง / ไฟไหม้', phone: '199', note: 'บรรเทาสาธารณภัยและดับเพลิง 24 ชม.', isMain: true },
+      { name: 'LINE ปภ. (แจ้งเหตุน้ำท่วม)', phone: '@1784DDPM', note: 'แจ้งเหตุน้ำท่วมและรับการแจ้งเตือนผ่าน LINE', isLine: true, link: 'https://line.me/R/ti/p/@1784ddpm' }
+    ]
+  },
+  {
+    category: 'rescue',
+    title: '🚑 หน่วยกู้ภัย • 24 ชั่วโมง',
+    badge: 'กู้ชีพ-กู้ภัย',
+    items: [
+      { name: 'มูลนิธิสว่างบำเพ็ญธรรมสถาน ปราจีนบุรี (ศูนย์วิทยุ ทุกอำเภอ)', phone: '037-214456', note: 'ศูนย์ประสานงานกู้ภัยหลัก จ.ปราจีนบุรี' },
+      { name: 'สว่างบำเพ็ญ จุดโรจนะ (ต.หนองโพรง ศรีมหาโพธิ)', phone: '097-1146080', note: 'โซนนิคมโรจนะและใกล้เคียง' },
+      { name: 'สว่างบำเพ็ญ จุด อ.บ้านสร้าง', phone: '098-5074181', note: 'พื้นที่ อ.บ้านสร้าง' },
+      { name: 'มูลนิธิสัจจพุทธธรรม อ.กบินทร์บุรี', phone: '037-283114', note: 'ศูนย์กู้ภัยกบินทร์บุรีและแควหนุมาน' },
+      { name: 'ร่วมกตัญญู ปราจีนบุรี', phone: '064-3321669', altPhone: '037-620239', note: 'สายด่วนกู้ภัยร่วมกตัญญู' },
+      { name: 'กู้ภัย จุดห้วยขื่อ (ประจันตคาม)', phone: '087-8120021', note: 'พื้นที่ประจันตคามและเชิงเขาใหญ่' },
+      { name: 'อบต.เมืองเก่า (กบินทร์บุรี) เหตุด่วน', phone: '084-9522744', note: 'หน่วยเผชิญเหตุน้ำท่วม ต.เมืองเก่า' }
+    ]
+  },
+  {
+    category: 'hospital',
+    title: '🏥 โรงพยาบาลเอกชน • 24 ชั่วโมง (อ.ศรีมหาโพธิ • แนวถนน 304)',
+    badge: 'รพ. เอกชน 24 ชม.',
+    items: [
+      { name: 'รพ.เกษมราษฎร์ ปราจีนบุรี (ต.ท่าตูม)', phone: '037-627000', note: 'แนวถนน 304 อ.ศรีมหาโพธิ' },
+      { name: 'สายด่วนเครือเกษมราษฎร์', phone: '1218', note: 'สายด่วนสุขภาพ 4 หลัก', isMain: true },
+      { name: 'รพ.จุฬารัตน์ 304 อินเตอร์ (ต.กรอกสมบูรณ์)', phone: '037-239665', note: 'ต.กรอกสมบูรณ์ อ.ศรีมหาโพธิ' }
+    ]
+  },
+  {
+    category: 'gov',
+    title: '🏢 หน่วยงานจังหวัด ปราจีนบุรี',
+    badge: 'หน่วยงานจังหวัด',
+    items: [
+      { name: 'ปภ.จังหวัดปราจีนบุรี', phone: '037-454416', note: 'เบอร์หลัก (คู่สาย 037-454416 ถึง 20)' },
+      { name: 'ศูนย์ ปภ.เขต 3 ปราจีนบุรี', phone: '037-291750', note: 'ดูแลพื้นที่ภาคตะวันออก (037-291750 ถึง 5)' },
+      { name: 'ศาลากลางจังหวัดปราจีนบุรี', phone: '037-454400', note: 'ศูนย์ราชการจังหวัด (037-454400 ถึง 6)' },
+      { name: 'ชลประทานปราจีนบุรี (ระดับน้ำ)', phone: '037-200417', note: 'สอบถามระดับน้ำแม่น้ำปราจีนบุรี/ประตูระบายน้ำ' }
+    ]
+  },
+  {
+    category: 'district',
+    title: '📍 อ.เมืองปราจีนบุรี',
+    badge: 'อำเภอเมือง',
+    items: [
+      { name: 'รพ.เจ้าพระยาอภัยภูเบศร', phone: '037-211088', emergencyPhone: '037-211247', note: 'ห้องฉุกเฉิน: 037-211247' },
+      { name: 'รพ.ค่ายจักรพงษ์', phone: '037-211591', emergencyPhone: '037-211552', note: 'ห้องฉุกเฉิน: 037-211552' },
+      { name: 'สภ.เมืองปราจีนบุรี', phone: '037-212008', note: 'สถานีตำรวจภูธรเมืองปราจีนบุรี' },
+      { name: 'เทศบาลเมืองปราจีนบุรี', phone: '037-211028', note: 'สำนักงานเทศบาลเมืองปราจีนบุรี' }
+    ]
+  },
+  {
+    category: 'district',
+    title: '📍 อ.ศรีมหาโพธิ',
+    badge: 'ศรีมหาโพธิ',
+    items: [
+      { name: 'รพ.ศรีมหาโพธิ', phone: '037-279204', note: 'โรงพยาบาลศรีมหาโพธิ' },
+      { name: 'สภ.ศรีมหาโพธิ', phone: '037-279111', note: 'สถานีตำรวจภูธรศรีมหาโพธิ' }
+    ]
+  },
+  {
+    category: 'district',
+    title: '📍 อ.กบินทร์บุรี',
+    badge: 'กบินทร์บุรี',
+    items: [
+      { name: 'รพ.กบินทร์บุรี', phone: '037-288196', altPhone: '037-288208', note: 'นอกเวลาราชการ: 037-288208' },
+      { name: 'สภ.กบินทร์บุรี', phone: '037-280227', note: 'สถานีตำรวจภูธรกบินทร์บุรี' },
+      { name: 'สภ.สระบัว', phone: '037-575092', note: 'สถานีตำรวจภูธรสระบัว' }
+    ]
+  },
+  {
+    category: 'district',
+    title: '📍 อ.ประจันตคาม',
+    badge: 'ประจันตคาม',
+    items: [
+      { name: 'รพ.ประจันตคาม', phone: '037-291368', note: 'โรงพยาบาลประจันตคาม' },
+      { name: 'สภ.ประจันตคาม', phone: '037-291498', altPhone: '088-5501688', note: 'อีกหมายเลข: 088-5501688' }
+    ]
+  },
+  {
+    category: 'district',
+    title: '📍 อ.ศรีมโหสถ',
+    badge: 'ศรีมโหสถ',
+    items: [
+      { name: 'รพ.ศรีมโหสถ', phone: '037-276413', altPhone: '037-276127', note: 'อีกหมายเลข: 037-276127' },
+      { name: 'สภ.ศรีมโหสถ', phone: '037-276123', note: 'สถานีตำรวจภูธรศรีมโหสถ' }
+    ]
+  },
+  {
+    category: 'district',
+    title: '📍 อ.บ้านสร้าง',
+    badge: 'บ้านสร้าง',
+    items: [
+      { name: 'รพ.บ้านสร้าง', phone: '037-271238', note: 'โรงพยาบาลบ้านสร้าง' },
+      { name: 'สภ.บ้านสร้าง', phone: '037-271240', note: 'สถานีตำรวจภูธรบ้านสร้าง' }
+    ]
+  },
+  {
+    category: 'district',
+    title: '📍 อ.นาดี',
+    badge: 'นาดี',
+    items: [
+      { name: 'รพ.นาดี', phone: '037-289057', note: 'โรงพยาบาลนาดี' },
+      { name: 'สภ.นาดี', phone: '037-452846', altPhone: '037-289099', note: 'อีกหมายเลข: 037-289099' }
+    ]
+  }
+];
+
+let activeHotlineCategory = 'all';
+let activeHotlineQuery = '';
+
+function cleanTelUrl(phone) {
+  return phone.replace(/[^0-9]/g, '');
+}
+
+function renderHotlines() {
+  const container = document.getElementById('hotline-list-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const q = activeHotlineQuery.trim().toLowerCase();
+
+  const filteredGroups = HOTLINE_DATA.map(group => {
+    if (activeHotlineCategory !== 'all' && group.category !== activeHotlineCategory) {
+      return null;
+    }
+
+    const filteredItems = group.items.filter(item => {
+      if (!q) return true;
+      const haystack = `${group.title} ${item.name} ${item.phone} ${item.note || ''} ${item.altPhone || ''} ${item.emergencyPhone || ''}`.toLowerCase();
+      return haystack.includes(q);
+    });
+
+    if (filteredItems.length === 0) return null;
+    return { ...group, items: filteredItems };
+  }).filter(Boolean);
+
+  if (filteredGroups.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; color: var(--text-muted); padding: 36px 16px; background: var(--bg-surface-elevated); border-radius: 12px;">
+        <span style="font-size: 32px; display: block; margin-bottom: 8px;">🔍</span>
+        <strong>ไม่พบเบอร์โทรฉุกเฉินที่ค้นหา</strong>
+        <p style="font-size: 12px; margin-top: 4px;">ลองค้นหาด้วยชื่ออำเภอ หน่วยงาน หรือหมายเลขโทรศัพท์</p>
+      </div>
+    `;
+    return;
+  }
+
+  filteredGroups.forEach(group => {
+    const card = document.createElement('div');
+    card.className = 'hotline-group-card';
+
+    const header = document.createElement('div');
+    header.className = 'hotline-group-header';
+    header.innerHTML = `
+      <div class="hotline-group-title">
+        <span>${escapeHtml(group.title)}</span>
+      </div>
+      <span class="badge ${group.badgeClass === 'urgent' ? 'badge-urgent' : 'badge-staff'}" style="font-size: 11px;">
+        ${escapeHtml(group.badge)}
+      </span>
+    `;
+    card.appendChild(header);
+
+    const itemsGrid = document.createElement('div');
+    itemsGrid.className = 'hotline-items-grid';
+
+    group.items.forEach(item => {
+      const itemEl = document.createElement('div');
+      itemEl.className = 'hotline-item';
+
+      let callButtonsHtml = '';
+      if (item.isLine) {
+        callButtonsHtml = `
+          <a href="${item.link}" target="_blank" rel="noopener noreferrer" class="hotline-call-btn line" title="แอด LINE">
+            💬 แอด LINE
+          </a>
+        `;
+      } else {
+        const btnClass = item.isMain ? 'urgent' : '';
+        callButtonsHtml = `
+          <a href="tel:${cleanTelUrl(item.phone)}" class="hotline-call-btn ${btnClass}" title="โทร ${item.phone}">
+            📞 ${item.phone}
+          </a>
+        `;
+        if (item.emergencyPhone) {
+          callButtonsHtml += `
+            <a href="tel:${cleanTelUrl(item.emergencyPhone)}" class="hotline-call-btn urgent" title="โทรห้องฉุกเฉิน ${item.emergencyPhone}">
+              🚨 ฉุกเฉิน ${item.emergencyPhone}
+            </a>
+          `;
+        }
+        if (item.altPhone) {
+          callButtonsHtml += `
+            <a href="tel:${cleanTelUrl(item.altPhone)}" class="hotline-call-btn secondary" title="โทรเบอร์สำรอง ${item.altPhone}">
+              📞 สำรอง ${item.altPhone}
+            </a>
+          `;
+        }
+      }
+
+      itemEl.innerHTML = `
+        <div class="hotline-item-info">
+          <div class="hotline-item-name">${escapeHtml(item.name)}</div>
+          ${item.note ? `<div class="hotline-item-note">${escapeHtml(item.note)}</div>` : ''}
+        </div>
+        <div class="hotline-btn-group">
+          ${callButtonsHtml}
+        </div>
+      `;
+
+      itemsGrid.appendChild(itemEl);
+    });
+
+    card.appendChild(itemsGrid);
+    container.appendChild(card);
+  });
+}
+
+function openHotlineModal() {
+  renderHotlines();
+  hotlineModal?.showModal();
+}
+
+// Hotline Search & Filter Handlers
+document.getElementById('hotline-search-input')?.addEventListener('input', (e) => {
+  activeHotlineQuery = e.target.value;
+  renderHotlines();
+});
+
+document.querySelectorAll('.hotline-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.hotline-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeHotlineCategory = chip.dataset.cat || 'all';
+    renderHotlines();
+  });
+});
+
+document.getElementById('hotline-modal-close')?.addEventListener('click', () => {
+  hotlineModal?.close();
+});
+
+document.getElementById('fab-hotline-btn')?.addEventListener('click', openHotlineModal);
+
 
 

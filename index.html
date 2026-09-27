@@ -220,6 +220,10 @@
           <span class="fab-icon">⌂</span>
           <span class="fab-text">จุดช่วยเหลือ</span>
         </button>
+        <button type="button" class="fab-btn" id="fab-hotline-btn" style="background:#dc2626; color:#ffffff;" title="เบอร์โทรฉุกเฉินและกู้ภัย 24 ชม.">
+          <span class="fab-icon">📞</span>
+          <span class="fab-text">เบอร์ฉุกเฉิน</span>
+        </button>
         <button type="button" class="fab-btn fab-btn-hub" id="fab-quick-links-btn" title="ศูนย์รวมเมนูที่เกี่ยวข้อง & จุดเชื่อมโยง">
           <span class="fab-icon">🔗</span>
           <span class="fab-text">เมนูเชื่อมโยง</span>
@@ -805,6 +809,19 @@
       </div>
 
       <div class="quick-links-body">
+        <!-- Section 0: สายด่วนฉุกเฉิน 24 ชม. -->
+        <div class="quick-section-title" style="color: #ef4444;">📞 สายด่วนฉุกเฉิน & กู้ภัย 24 ชั่วโมง</div>
+        <div class="quick-nav-tiles-grid" style="margin-bottom: 16px;">
+          <div class="quick-nav-tile" role="button" tabindex="0" data-hub-action="hotlines" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(37, 99, 235, 0.12) 100%); border-color: rgba(239, 68, 68, 0.5);">
+            <span class="tile-icon">📞</span>
+            <div class="tile-text">
+              <strong style="color: #ef4444; font-size: 15px;">รวมเบอร์โทรฉุกเฉิน กู้ภัย & 7 อำเภอ (24 ชม.)</strong>
+              <small>ปภ. 1784, กู้ชีพ 1669, กู้ภัยสว่างบำเพ็ญ, รพ., สภ. ทุกอำเภอ แตะโทรออกได้ทันที</small>
+            </div>
+            <span class="tile-arrow" style="color: #ef4444; font-size: 18px;">➔</span>
+          </div>
+        </div>
+
         <!-- Section 1: เมนูหลักและแผนที่ -->
         <div class="quick-section-title">🗺️ แผนที่ & รายงานสถานการณ์สด</div>
         <div class="quick-nav-tiles-grid">
@@ -896,6 +913,38 @@
             <span class="tile-arrow">➔</span>
           </div>
         </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ==================== EMERGENCY HOTLINE DIRECTORY MODAL ==================== -->
+  <dialog id="hotline-modal" class="app-modal modal-wide">
+    <div class="modal-card" style="height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e3a8a 0%, #1e1b4b 100%); color: #fff;">
+        <div class="modal-title-wrap">
+          <span class="modal-eyebrow" style="color: #60a5fa;">24/7 PRACHINBURI EMERGENCY HOTLINES</span>
+          <h3 style="color: #ffffff; display: flex; align-items: center; gap: 8px;">
+            <span>📞 รวมเบอร์โทรฉุกเฉิน & กู้ภัย จ.ปราจีนบุรี</span>
+          </h3>
+          <p class="modal-subtitle" style="color: #cbd5e1;">แตะเพื่อโทรออกได้ทันที ให้บริการตลอด 24 ชั่วโมง แยกตามอำเภอ</p>
+        </div>
+        <button type="button" id="hotline-modal-close" class="modal-close-btn" style="color: #fff;" aria-label="ปิด">✕</button>
+      </div>
+
+      <div style="padding: 12px 16px; background: var(--bg-surface-elevated); border-bottom: 1px solid var(--border-subtle); display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <input type="search" id="hotline-search-input" class="text-input" placeholder="🔍 ค้นหาเบอร์โทร, ชื่ออำเภอ, กู้ภัย, รพ., สภ..." style="flex: 1; min-width: 200px; padding: 8px 12px; font-size: 13px; border-radius: 8px;">
+        <div class="hotline-filter-chips" style="display: flex; gap: 6px; overflow-x: auto; width: 100%; padding-top: 4px;">
+          <button type="button" class="hotline-chip active" data-cat="all">ทั้งหมด</button>
+          <button type="button" class="hotline-chip" data-cat="main">⚡ สายด่วนหลัก 24 ชม.</button>
+          <button type="button" class="hotline-chip" data-cat="rescue">🚑 หน่วยกู้ภัย</button>
+          <button type="button" class="hotline-chip" data-cat="hospital">🏥 โรงพยาบาล</button>
+          <button type="button" class="hotline-chip" data-cat="gov">🏢 หน่วยงานจังหวัด</button>
+          <button type="button" class="hotline-chip" data-cat="district">📍 แยก 7 อำเภอ</button>
+        </div>
+      </div>
+
+      <div class="hotline-body" id="hotline-list-container" style="padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; background: var(--bg-surface);">
+        <!-- Hotlines injected dynamically via app.js -->
       </div>
     </div>
   </dialog>
