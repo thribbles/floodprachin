@@ -2193,6 +2193,12 @@ function renderEventMedia(attachmentPath, createdAt) {
       const img = document.createElement('img');
       img.className = 'event-media-item';
       img.src = cacheBustImage(url, createdAt);
+      img.alt = 'รูปภาพเหตุการณ์';
+      img.title = 'แตะ/คลิกเพื่อเปิดดูรูปภาพต้นฉบับขนาดเต็ม';
+      img.style.cursor = 'zoom-in';
+      img.addEventListener('click', () => {
+        window.open(url, '_blank');
+      });
       mediaContainer.appendChild(img);
     }
   });
