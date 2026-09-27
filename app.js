@@ -2185,10 +2185,49 @@ function renderEventMedia(attachmentPath, createdAt) {
 
 // --- News Modal ---
 const newsModal = document.getElementById('news-modal');
+
+// ข่าวสารแบบกำหนดเอง - เพิ่มลิงก์และหัวข้อข่าวที่นี่ (เอาลิ้งมาแปะในนี้ได้เลย)
+const manualNewsList = [
+  { 
+    title: 'ตัวอย่างข่าว: ประกาศเตือนภัยระดับน้ำแม่น้ำปราจีนบุรี', 
+    url: 'https://facebook.com/PR.Prachinburi', 
+    date: '27 ก.ย. 2026' 
+  },
+  // { title: 'ข่าวต่อไป...', url: '...', date: '...' }
+];
+
+function renderNewsList() {
+  const container = document.getElementById('news-list-container');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (manualNewsList.length === 0) {
+    container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">ยังไม่มีประกาศข่าวสาร</div>';
+    return;
+  }
+  
+  manualNewsList.forEach(news => {
+    const item = document.createElement('a');
+    item.href = news.url;
+    item.target = '_blank';
+    item.style.cssText = 'display: block; padding: 16px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-decoration: none; color: inherit; transition: transform 0.2s;';
+    item.onmouseover = () => item.style.transform = 'translateY(-2px)';
+    item.onmouseout = () => item.style.transform = 'none';
+    
+    item.innerHTML = `
+      <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">${news.title}</div>
+      <div style="font-size: 12px; color: #64748b;">${news.date}</div>
+    `;
+    container.appendChild(item);
+  });
+}
+
 document.getElementById('news-page-btn')?.addEventListener('click', () => {
+  renderNewsList();
   newsModal?.showModal();
 });
 document.getElementById('tab-news-btn')?.addEventListener('click', () => {
+  renderNewsList();
   newsModal?.showModal();
 });
 document.getElementById('news-modal-close')?.addEventListener('click', () => {
