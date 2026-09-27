@@ -460,6 +460,11 @@
             </div>
 
             <div>
+              <label class="field-label" for="admin-report-datetime">วันและเวลาที่เกิดเหตุ / แจ้งเรื่อง</label>
+              <input type="datetime-local" id="admin-report-datetime" class="text-input">
+            </div>
+
+            <div>
               <label class="field-label" for="admin-report-desc">รายละเอียดเหตุการณ์</label>
               <textarea id="admin-report-desc" class="textarea-input" rows="3" placeholder="ระบุรายละเอียดเหตุการณ์"></textarea>
             </div>
@@ -501,6 +506,11 @@
                   <option value="closed_verify">⚫ ปิด / รอตรวจสอบใหม่</option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label class="field-label" for="admin-support-datetime">วันและเวลาที่ลงข้อมูล / อัปเดต</label>
+              <input type="datetime-local" id="admin-support-datetime" class="text-input">
             </div>
 
             <div>
@@ -747,6 +757,7 @@
             <span class="badge badge-staff">เฉพาะเจ้าหน้าที่</span>
           </div>
           <form id="add-news-form" style="display: flex; flex-direction: column; gap: 12px;">
+            <input type="hidden" id="news-edit-id" value="">
             <div>
               <label for="news-input-title" style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">หัวข้อข่าว / ข้อความประกาศ *</label>
               <input type="text" id="news-input-title" required placeholder="เช่น แจ้งเตือนระดับน้ำ อ.กบินทร์บุรี หรือ แจ้งเส้นทางเลี่ยง" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
@@ -755,13 +766,20 @@
               <label for="news-input-url" style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">ลิงก์ Facebook หรือเว็บไซต์ข่าว *</label>
               <input type="url" id="news-input-url" required placeholder="https://www.facebook.com/..." style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
             </div>
-            <div>
-              <label for="news-input-source" style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">หน่วยงาน / แหล่งที่มา (ไม่บังคับ)</label>
-              <input type="text" id="news-input-source" placeholder="เช่น เพจ ปภ.ปราจีนบุรี หรือ สวท.ปราจีนบุรี" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+              <div>
+                <label for="news-input-source" style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">หน่วยงาน / แหล่งที่มา</label>
+                <input type="text" id="news-input-source" placeholder="เช่น เพจ ปภ.ปราจีนบุรี หรือ สวท.ปราจีนบุรี" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+              </div>
+              <div>
+                <label for="news-input-date" style="display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 4px;">วันและเวลาที่โพสต์ (ไม่เลือก = ปัจจุบัน)</label>
+                <input type="datetime-local" id="news-input-date" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+              </div>
             </div>
-            <div style="display: flex; justify-content: flex-end;">
+            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+              <button type="button" id="news-cancel-edit-btn" hidden style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer;">✕ ยกเลิกแก้ไข</button>
               <button type="submit" id="news-submit-btn" style="background: #2563eb; color: #ffffff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                <span>➕ บันทึกและโพสต์ข่าว</span>
+                <span id="news-submit-btn-text">➕ บันทึกและโพสต์ข่าว</span>
               </button>
             </div>
           </form>

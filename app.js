@@ -21,6 +21,7 @@ import {
   subscribeToRealtime,
   getNewsList,
   addNewsItem,
+  updateNewsItem,
   deleteNewsItem
 } from './report-store.js';
 
@@ -697,6 +698,12 @@ function openEventDialog(item, kind) {
       document.getElementById('admin-helped-by').value = item.helpedBy || '';
       const descEl = document.getElementById('admin-report-desc');
       if (descEl) descEl.value = item.description || '';
+      const dateEl = document.getElementById('admin-report-datetime');
+      if (dateEl && item.createdAt) {
+        const d = new Date(item.createdAt);
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        dateEl.value = d.toISOString().slice(0, 16);
+      }
     }
   } else {
     // Assistance Point
@@ -729,6 +736,12 @@ function openEventDialog(item, kind) {
       document.getElementById('admin-support-status').value = item.status || 'available';
       const descEl = document.getElementById('admin-support-desc');
       if (descEl) descEl.value = item.description || '';
+      const dateEl = document.getElementById('admin-support-datetime');
+      if (dateEl && item.createdAt) {
+        const d = new Date(item.createdAt);
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        dateEl.value = d.toISOString().slice(0, 16);
+      }
     }
   }
 
@@ -747,19 +760,18 @@ document.getElementById('admin-save-status-btn').addEventListener('click', async
   const people = peopleVal !== '' && !isNaN(Number(peopleVal)) ? Number(peopleVal) : null;
   const helpedBy = document.getElementById('admin-helped-by').value.trim();
   const description = document.getElementById('admin-report-desc')?.value.trim() || activeEventItem.description;
+  const dtVal = document.getElementById('admin-report-datetime')?.value;
+  const createdAt = dtVal ? new Date(dtVal).toISOString() : activeEventItem.createdAt;
   const btn = document.getElementById('admin-save-status-btn');
 
   btn.disabled = true;
   try {
+    const changes = { type, status, people, helpedBy, description, createdAt };
     if (database) {
-      await updateReport(activeEventItem, { type, status, people, helpedBy, description });
+      await updateReport(activeEventItem, changes);
       await syncReports();
     } else {
-      activeEventItem.type = type;
-      activeEventItem.status = status;
-      activeEventItem.people = people;
-      activeEventItem.helpedBy = helpedBy;
-      activeEventItem.description = description;
+      Object.assign(activeEventItem, changes);
       saveLocalReports();
       render();
     }
@@ -800,20 +812,20 @@ document.getElementById('admin-save-support-btn').addEventListener('click', asyn
   const category = document.getElementById('admin-support-category')?.value || activeEventItem.category;
   const status = document.getElementById('admin-support-status').value;
   const description = document.getElementById('admin-support-desc')?.value.trim() || activeEventItem.description;
+  const dtVal = document.getElementById('admin-support-datetime')?.value;
+  const createdAt = dtVal ? new Date(dtVal).toISOString() : activeEventItem.createdAt;
   const btn = document.getElementById('admin-save-support-btn');
 
   if (!name) return toast('กรุณาระบุชื่อจุดช่วยเหลือ');
 
   btn.disabled = true;
   try {
+    const changes = { name, category, status, description, createdAt };
     if (database) {
-      await updateAssistancePoint(activeEventItem, { name, category, status, description });
+      await updateAssistancePoint(activeEventItem, changes);
       await syncAssistancePoints();
     } else {
-      activeEventItem.name = name;
-      activeEventItem.category = category;
-      activeEventItem.status = status;
-      activeEventItem.description = description;
+      Object.assign(activeEventItem, changes);
       render();
     }
     toast('บันทึกการแก้ไขจุดช่วยเหลือเรียบร้อย');
@@ -2194,6 +2206,17 @@ function renderEventMedia(attachmentPath, createdAt) {
 const newsModal = document.getElementById('news-modal');
 const staffNewsPanel = document.getElementById('staff-news-panel');
 
+function resetNewsForm() {
+  const form = document.getElementById('add-news-form');
+  if (form) form.reset();
+  const editIdEl = document.getElementById('news-edit-id');
+  if (editIdEl) editIdEl.value = '';
+  const cancelBtn = document.getElementById('news-cancel-edit-btn');
+  if (cancelBtn) cancelBtn.hidden = true;
+  const btnText = document.getElementById('news-submit-btn-text');
+  if (btnText) btnText.textContent = '➕ บันทึกและโพสต์ข่าว';
+}
+
 async function renderNewsList() {
   const container = document.getElementById('news-list-container');
   if (!container) return;
@@ -2236,9 +2259,14 @@ async function renderNewsList() {
           </div>
         </div>
         ${isStaff ? `
-          <button type="button" class="btn-delete-news" data-id="${news.id}" title="ลบข่าวนี้" style="flex-shrink: 0; background: #fee2e2; color: #dc2626; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-            <span>🗑️ ลบ</span>
-          </button>
+          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            <button type="button" class="btn-edit-news" data-id="${news.id}" title="แก้ไขข่าวนี้" style="background: #e0f2fe; color: #0284c7; border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+              <span>✏️ แก้ไข</span>
+            </button>
+            <button type="button" class="btn-delete-news" data-id="${news.id}" title="ลบข่าวนี้" style="background: #fee2e2; color: #dc2626; border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+              <span>🗑️ ลบ</span>
+            </button>
+          </div>
         ` : `
           <a href="${news.url}" target="_blank" rel="noopener noreferrer" style="flex-shrink: 0; background: #eff6ff; color: #2563eb; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; text-decoration: none;">
             เปิดอ่าน ↗
@@ -2253,6 +2281,35 @@ async function renderNewsList() {
     });
 
     if (isStaff) {
+      // Edit button handler
+      container.querySelectorAll('.btn-edit-news').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const id = btn.getAttribute('data-id');
+          const item = list.find(x => String(x.id) === String(id));
+          if (!item) return;
+
+          document.getElementById('news-edit-id').value = item.id;
+          document.getElementById('news-input-title').value = item.title || '';
+          document.getElementById('news-input-url').value = item.url || '';
+          document.getElementById('news-input-source').value = item.source || '';
+          
+          if (item.created_at) {
+            const d = new Date(item.created_at);
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            document.getElementById('news-input-date').value = d.toISOString().slice(0, 16);
+          } else {
+            document.getElementById('news-input-date').value = '';
+          }
+
+          document.getElementById('news-cancel-edit-btn').hidden = false;
+          document.getElementById('news-submit-btn-text').textContent = '💾 บันทึกการแก้ไขข่าว';
+          document.getElementById('news-input-title').focus();
+          document.getElementById('staff-news-panel')?.scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+
+      // Delete button handler
       container.querySelectorAll('.btn-delete-news').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.preventDefault();
@@ -2277,17 +2334,26 @@ async function renderNewsList() {
   }
 }
 
-// Add News Form Submit Handler
+// Cancel Edit Button
+document.getElementById('news-cancel-edit-btn')?.addEventListener('click', () => {
+  resetNewsForm();
+});
+
+// Add / Update News Form Submit Handler
 document.getElementById('add-news-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('news-submit-btn');
+  const editId = document.getElementById('news-edit-id')?.value;
   const titleInput = document.getElementById('news-input-title');
   const urlInput = document.getElementById('news-input-url');
   const sourceInput = document.getElementById('news-input-source');
+  const dateInput = document.getElementById('news-input-date');
 
   const title = titleInput.value.trim();
   const url = urlInput.value.trim();
   const source = sourceInput.value.trim();
+  const dateVal = dateInput.value;
+  const created_at = dateVal ? new Date(dateVal).toISOString() : (editId ? undefined : new Date().toISOString());
 
   if (!title || !url) return;
 
@@ -2295,22 +2361,27 @@ document.getElementById('add-news-form')?.addEventListener('submit', async (e) =
   btn.textContent = 'กำลังบันทึก…';
 
   try {
-    await addNewsItem({ title, url, source });
-    titleInput.value = '';
-    urlInput.value = '';
-    sourceInput.value = '';
-    toast('โพสต์ข่าวสารสำเร็จเรียบร้อย 🎉');
+    if (editId) {
+      await updateNewsItem(editId, { title, url, source, created_at });
+      toast('แก้ไขข้อมูลข่าวสารเรียบร้อย ✨');
+    } else {
+      await addNewsItem({ title, url, source, created_at });
+      toast('โพสต์ข่าวสารสำเร็จเรียบร้อย 🎉');
+    }
+    resetNewsForm();
     await renderNewsList();
   } catch (err) {
     toast(describeError(err));
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<span>➕ บันทึกและโพสต์ข่าว</span>';
+    const btnText = document.getElementById('news-submit-btn-text');
+    if (btnText) btnText.textContent = editId ? '💾 บันทึกการแก้ไขข่าว' : '➕ บันทึกและโพสต์ข่าว';
   }
 });
 
 // Staff Ribbon News Button
 document.getElementById('staff-news-btn')?.addEventListener('click', () => {
+  resetNewsForm();
   renderNewsList();
   newsModal?.showModal();
   setTimeout(() => {

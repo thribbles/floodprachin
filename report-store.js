@@ -316,12 +316,12 @@ export async function getNewsList() {
   ];
 }
 
-export async function addNewsItem({ title, url, source }) {
+export async function addNewsItem({ title, url, source, created_at }) {
   const item = {
     title: title.trim(),
     url: url.trim(),
     source: (source || 'เจ้าหน้าที่').trim(),
-    created_at: new Date().toISOString()
+    created_at: created_at ? new Date(created_at).toISOString() : new Date().toISOString()
   };
   if (database) {
     try {
@@ -347,6 +347,38 @@ export async function addNewsItem({ title, url, source }) {
   return newItem;
 }
 
+export async function updateNewsItem(id, { title, url, source, created_at }) {
+  const changes = {
+    title: title.trim(),
+    url: url.trim(),
+    source: (source || 'เจ้าหน้าที่').trim()
+  };
+  if (created_at) {
+    changes.created_at = new Date(created_at).toISOString();
+  }
+  if (database && !String(id).startsWith('local-') && !String(id).startsWith('default-')) {
+    try {
+      const { data, error } = await database
+        .from('news_updates')
+        .update(changes)
+        .eq('id', id)
+        .select();
+      if (!error && data?.[0]) {
+        return data[0];
+      }
+    } catch (e) {
+      console.warn('Supabase update news error:', e);
+    }
+  }
+  let cached = [];
+  try {
+    cached = JSON.parse(localStorage.getItem('cached_news_items') || '[]');
+  } catch (e) {}
+  const updated = cached.map(x => (String(x.id) === String(id) ? { ...x, ...changes } : x));
+  localStorage.setItem('cached_news_items', JSON.stringify(updated));
+  return { id, ...changes };
+}
+
 export async function deleteNewsItem(id) {
   if (database && !String(id).startsWith('local-') && !String(id).startsWith('default-')) {
     try {
@@ -363,4 +395,5 @@ export async function deleteNewsItem(id) {
   localStorage.setItem('cached_news_items', JSON.stringify(updated));
   return true;
 }
+
 

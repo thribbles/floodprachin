@@ -22,6 +22,13 @@ create policy news_insert_staff on public.news_updates
   for insert to authenticated
   with check ((select auth.jwt()->'app_metadata'->>'role') in ('rescuer', 'admin', 'staff') or auth.uid() is not null);
 
+-- Authenticated staff/rescuers/admins can update news
+drop policy if exists news_update_staff on public.news_updates;
+create policy news_update_staff on public.news_updates
+  for update to authenticated
+  using ((select auth.jwt()->'app_metadata'->>'role') in ('rescuer', 'admin', 'staff') or auth.uid() is not null)
+  with check ((select auth.jwt()->'app_metadata'->>'role') in ('rescuer', 'admin', 'staff') or auth.uid() is not null);
+
 -- Authenticated staff/rescuers/admins can delete news
 drop policy if exists news_delete_staff on public.news_updates;
 create policy news_delete_staff on public.news_updates
@@ -29,4 +36,4 @@ create policy news_delete_staff on public.news_updates
   using ((select auth.jwt()->'app_metadata'->>'role') in ('rescuer', 'admin', 'staff') or auth.uid() is not null);
 
 grant select on public.news_updates to anon, authenticated;
-grant insert, delete on public.news_updates to authenticated;
+grant insert, update, delete on public.news_updates to authenticated;
