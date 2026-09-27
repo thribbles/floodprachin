@@ -472,14 +472,19 @@ function render() {
         });
       }
 
+      const popupTitle = isHelp
+        ? (isDone ? '✓ ช่วยเหลือแล้ว' : '🆘 ขอความช่วยเหลือ')
+        : (isDone ? '✓ น้ำลดปกติ' : '🌊 รายงานน้ำท่วม');
+      const popupColor = isDone ? '#94a3b8' : isHelp ? '#ef4444' : '#3b82f6';
+
       marker.bindPopup(`
         <div style="font-family:'IBM Plex Sans Thai',sans-serif; min-width:200px; padding:2px;">
-          <strong style="color:${isDone ? '#94a3b8' : isHelp ? '#ef4444' : '#3b82f6'}; font-size:13px;">
-            ${isDone ? '✓ ช่วยเหลือแล้ว' : isHelp ? '🆘 ขอความช่วยเหลือ' : '🌊 รายงานน้ำท่วม'}
+          <strong style="color:${popupColor}; font-size:13px;">
+            ${popupTitle}
           </strong>
           <p style="margin:6px 0 4px; font-size:12px; line-height:1.4;">${escapeHtml(report.description)}</p>
           <div style="font-size:11px; color:#64748b;">
-            ${report.people ? `ผู้ประสบภัย ${report.people} คน · ` : ''}${relativeTime(report.createdAt)}
+            ${isHelp && report.people ? `ผู้ประสบภัย ${report.people} คน · ` : ''}${relativeTime(report.createdAt)}
           </div>
         </div>
       `);
@@ -503,12 +508,12 @@ function render() {
 
     let badgeClass = 'badge-urgent';
     let badgeText = 'ขอความช่วยเหลือ';
-    if (isDone) {
-      badgeClass = 'badge-done';
-      badgeText = 'ช่วยเหลือแล้ว';
-    } else if (report.type === 'flood') {
-      badgeClass = 'badge-report';
-      badgeText = 'รายงานน้ำท่วม';
+    if (isHelp) {
+      badgeClass = isDone ? 'badge-done' : 'badge-urgent';
+      badgeText = isDone ? '✓ ช่วยเหลือแล้ว' : 'ขอความช่วยเหลือ';
+    } else {
+      badgeClass = isDone ? 'badge-done' : 'badge-report';
+      badgeText = isDone ? '✓ น้ำลดปกติ' : 'รายงานน้ำท่วม';
     }
 
     let thumbHtml = '';
@@ -528,7 +533,7 @@ function render() {
         </div>
         <p class="feed-card-desc">${escapeHtml(report.description)}</p>
         <div class="feed-card-meta">
-          <span>${relativeTime(report.createdAt)}${report.people ? ` · ${report.people} คน` : ''}</span>
+          <span>${relativeTime(report.createdAt)}${isHelp && report.people ? ` · ${report.people} คน` : ''}</span>
           <div class="card-actions-mini">
             <button type="button" class="btn-mini-action" data-focus="report-${report.id}">📍 แผนที่</button>
             ${report.contact ? `<a href="tel:${report.contact.replace(/[^+\d]/g, '')}" class="btn-mini-action">📞 โทร</a>` : ''}
@@ -712,23 +717,30 @@ function openEventDialog(item, kind) {
   const metaGrid = document.getElementById('event-meta-grid');
 
   if (kind === 'report') {
-    document.getElementById('event-eyebrow').textContent = item.type === 'help' ? 'เหตุฉุกเฉิน / ขอความช่วยเหลือ' : 'รายงานสถานการณ์น้ำท่วม';
+    const isHelp = item.type === 'help';
+    const isDone = item.status === 'done';
+
+    document.getElementById('event-eyebrow').textContent = isHelp ? 'เหตุฉุกเฉิน / ขอความช่วยเหลือ' : 'รายงานสถานการณ์น้ำท่วม';
     document.getElementById('event-title').textContent = typeNames[item.type];
     document.getElementById('event-description-text').textContent = item.description;
 
-    const isDone = item.status === 'done';
-    statusBadge.className = `badge ${isDone ? 'badge-done' : item.type === 'help' ? 'badge-urgent' : 'badge-warning'}`;
-    statusBadge.textContent = isDone ? '✓ ช่วยเหลือแล้ว' : item.type === 'help' ? 'รอความช่วยเหลือ' : 'จุดน้ำท่วม';
+    if (isHelp) {
+      statusBadge.className = `badge ${isDone ? 'badge-done' : 'badge-urgent'}`;
+      statusBadge.textContent = isDone ? '✓ ช่วยเหลือแล้ว' : '🆘 รอความช่วยเหลือ';
+    } else {
+      statusBadge.className = `badge ${isDone ? 'badge-done' : 'badge-report'}`;
+      statusBadge.textContent = isDone ? '✓ น้ำลดสู่ปกติ' : '🌊 รายงานน้ำท่วม';
+    }
 
     metaGrid.innerHTML = `
       <div>🕒 เวลาแจ้ง: ${formatDateTime(item.createdAt)} (${relativeTime(item.createdAt)})</div>
       <div>📍 พิกัด: ${Number(item.lat).toFixed(5)}, ${Number(item.lng).toFixed(5)}</div>
-      ${item.people ? `<div>👥 จำนวนผู้ประสบภัย: <strong>${item.people} คน</strong></div>` : ''}
-      ${item.helpedBy ? `<div>🤝 ผู้ให้ความช่วยเหลือ: <strong>${escapeHtml(item.helpedBy)}</strong></div>` : ''}
+      ${isHelp && item.people ? `<div>👥 จำนวนผู้ประสบภัย: <strong>${item.people} คน</strong></div>` : ''}
+      ${isHelp && item.helpedBy ? `<div>🤝 ผู้ให้ความช่วยเหลือ: <strong>${escapeHtml(item.helpedBy)}</strong></div>` : ''}
     `;
 
     const phoneLabel = document.getElementById('event-phone-label');
-    if (phoneLabel) phoneLabel.textContent = '📞 โทรติดต่อผู้ประสบภัย: ';
+    if (phoneLabel) phoneLabel.textContent = isHelp ? '📞 โทรติดต่อผู้ประสบภัย: ' : '📞 โทรติดต่อผู้แจ้ง: ';
     if (item.contact) {
       callRow.hidden = false;
       document.getElementById('event-phone-link').href = `tel:${item.contact.replace(/[^+\d]/g, '')}`;
@@ -746,7 +758,35 @@ function openEventDialog(item, kind) {
     if (canEdit) {
       const typeEl = document.getElementById('admin-report-type');
       if (typeEl) typeEl.value = item.type || 'help';
-      document.getElementById('admin-status-select').value = item.status || 'pending';
+
+      const statusLabel = document.getElementById('admin-status-label');
+      const statusSelect = document.getElementById('admin-status-select');
+      const helpExtraFields = document.getElementById('admin-help-extra-fields');
+
+      if (isHelp) {
+        if (statusLabel) statusLabel.textContent = 'สถานะการช่วยเหลือ';
+        if (statusSelect) {
+          statusSelect.innerHTML = `
+            <option value="pending">🆘 รอความช่วยเหลือ</option>
+            <option value="done">✓ ช่วยเหลือเรียบร้อยแล้ว</option>
+            <option value="closed_verify">⚫ ปิด / รอตรวจสอบใหม่</option>
+          `;
+          statusSelect.value = item.status || 'pending';
+        }
+        if (helpExtraFields) helpExtraFields.hidden = false;
+      } else {
+        if (statusLabel) statusLabel.textContent = 'สถานะสถานการณ์น้ำ';
+        if (statusSelect) {
+          statusSelect.innerHTML = `
+            <option value="pending">🌊 น้ำท่วมขัง / เฝ้าระวัง</option>
+            <option value="done">✓ น้ำลดสู่ภาวะปกติ</option>
+            <option value="closed_verify">⚫ ปิด / รอตรวจสอบใหม่</option>
+          `;
+          statusSelect.value = item.status || 'pending';
+        }
+        if (helpExtraFields) helpExtraFields.hidden = true;
+      }
+
       const peopleEl = document.getElementById('admin-report-people');
       if (peopleEl) peopleEl.value = item.people ?? '';
       document.getElementById('admin-helped-by').value = item.helpedBy || '';
@@ -815,13 +855,43 @@ function openEventDialog(item, kind) {
 }
 
 // --- Admin Controls Handlers ---
+document.getElementById('admin-report-type')?.addEventListener('change', (e) => {
+  const isHelp = e.target.value === 'help';
+  const statusLabel = document.getElementById('admin-status-label');
+  const statusSelect = document.getElementById('admin-status-select');
+  const helpExtraFields = document.getElementById('admin-help-extra-fields');
+
+  if (isHelp) {
+    if (statusLabel) statusLabel.textContent = 'สถานะการช่วยเหลือ';
+    if (statusSelect) {
+      statusSelect.innerHTML = `
+        <option value="pending">🆘 รอความช่วยเหลือ</option>
+        <option value="done">✓ ช่วยเหลือเรียบร้อยแล้ว</option>
+        <option value="closed_verify">⚫ ปิด / รอตรวจสอบใหม่</option>
+      `;
+    }
+    if (helpExtraFields) helpExtraFields.hidden = false;
+  } else {
+    if (statusLabel) statusLabel.textContent = 'สถานะสถานการณ์น้ำ';
+    if (statusSelect) {
+      statusSelect.innerHTML = `
+        <option value="pending">🌊 น้ำท่วมขัง / เฝ้าระวัง</option>
+        <option value="done">✓ น้ำลดสู่ภาวะปกติ</option>
+        <option value="closed_verify">⚫ ปิด / รอตรวจสอบใหม่</option>
+      `;
+    }
+    if (helpExtraFields) helpExtraFields.hidden = true;
+  }
+});
+
 document.getElementById('admin-save-status-btn').addEventListener('click', async () => {
   if (!activeEventItem || activeEventType !== 'report') return;
   const type = document.getElementById('admin-report-type')?.value || activeEventItem.type;
+  const isFlood = type === 'flood';
   const status = document.getElementById('admin-status-select').value;
   const peopleVal = document.getElementById('admin-report-people')?.value;
-  const people = peopleVal !== '' && !isNaN(Number(peopleVal)) ? Number(peopleVal) : null;
-  const helpedBy = document.getElementById('admin-helped-by').value.trim();
+  const people = (!isFlood && peopleVal !== '' && !isNaN(Number(peopleVal))) ? Number(peopleVal) : null;
+  const helpedBy = isFlood ? null : document.getElementById('admin-helped-by').value.trim();
   const description = document.getElementById('admin-report-desc')?.value.trim() || activeEventItem.description;
   const dtVal = document.getElementById('admin-report-datetime')?.value;
   const createdAt = dtVal ? new Date(dtVal).toISOString() : activeEventItem.createdAt;
@@ -1075,9 +1145,30 @@ function selectReportType(type) {
   });
 
   const isAssistance = selectedType === 'assistance';
+  const isFlood = selectedType === 'flood';
   document.getElementById('assistance-fields').hidden = !isAssistance;
   const extraGrid = document.getElementById('report-extra-grid');
   if (extraGrid) extraGrid.hidden = isAssistance;
+
+  const peopleWrap = document.getElementById('report-people-wrap');
+  if (peopleWrap) {
+    peopleWrap.hidden = isFlood;
+    if (isFlood) {
+      const pInput = document.getElementById('report-people');
+      if (pInput) pInput.value = '';
+    }
+  }
+
+  const descInput = document.getElementById('report-desc');
+  if (descInput) {
+    if (isFlood) {
+      descInput.placeholder = 'เช่น น้ำท่วมผิวจราจร 30-50 ซม. รถเล็กผ่านไม่ได้, ระดับน้ำในคลองล้นตลิ่งท่วมลานวัด';
+    } else if (isAssistance) {
+      descInput.placeholder = 'เช่น ศูนย์พักพิงชั่วคราว มีเต็นท์ อาหาร และน้ำดื่ม พร้อมรองรับ 50 ท่าน';
+    } else {
+      descInput.placeholder = 'เช่น น้ำท่วมสูงระดับอก ต้องการเรืออพยพด่วน มีผู้ป่วยติดเตียงและเด็ก 2 คน';
+    }
+  }
 }
 
 function openReportModalWithType(type, coords = null) {
@@ -1318,7 +1409,7 @@ document.getElementById('simple-report-form').addEventListener('submit', async e
         type: selectedType,
         description: desc,
         contact: contactVal,
-        people: peopleVal > 0 ? peopleVal : null,
+        people: (selectedType === 'help' && peopleVal > 0) ? peopleVal : null,
         lat: selectedReportPin.lat,
         lng: selectedReportPin.lng,
         status: 'pending',
@@ -1620,6 +1711,13 @@ function updateStaffUi() {
   if (staffNewsPanel) {
     staffNewsPanel.hidden = !staff;
   }
+  const tabReportsBtn = document.getElementById('tab-reports-btn');
+  if (tabReportsBtn) tabReportsBtn.hidden = !staff;
+  const reportsDashBtn = document.getElementById('reports-dashboard-btn');
+  if (reportsDashBtn) reportsDashBtn.hidden = !staff;
+  const hubReportsTile = document.getElementById('hub-tile-reports');
+  if (hubReportsTile) hubReportsTile.hidden = !staff;
+
   if (staff && user) {
     btnLabel.textContent = user.app_metadata?.role === 'admin' ? 'ผู้ดูแล' : 'เจ้าหน้าที่';
     const roleName = user.app_metadata?.role || 'staff';

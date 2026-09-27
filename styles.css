@@ -2364,17 +2364,36 @@ html[data-theme="dark"] .leaflet-tile-pane {
 /* ==========================================================================
    Hotline Directory Styles (รวมเบอร์โทรฉุกเฉิน & กู้ภัย)
    ========================================================================== */
+.app-modal.modal-wide {
+  max-width: 860px;
+  width: calc(100vw - 24px);
+}
+
+.hotline-filter-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 2px 6px;
+  scrollbar-width: none;
+}
+
+.hotline-filter-chips::-webkit-scrollbar {
+  display: none;
+}
+
 .hotline-chip {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   color: var(--text-muted);
   border-radius: 20px;
-  padding: 5px 12px;
+  padding: 6px 14px;
   font-family: var(--font-thai);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 
@@ -2394,27 +2413,30 @@ html[data-theme="dark"] .leaflet-tile-pane {
 }
 
 .hotline-group-header {
-  padding: 10px 14px;
+  padding: 12px 14px;
   background: rgba(30, 41, 59, 0.25);
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .hotline-group-title {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 14.5px;
   color: var(--text-main);
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1 1 auto;
 }
 
 .hotline-items-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 10px;
   padding: 12px;
 }
 
@@ -2422,35 +2444,40 @@ html[data-theme="dark"] .leaflet-tile-pane {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  gap: 10px;
+  border-radius: 10px;
+  gap: 12px;
+  box-sizing: border-box;
 }
 
 .hotline-item-info {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  word-break: break-word;
 }
 
 .hotline-item-name {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--text-main);
-  line-height: 1.35;
+  line-height: 1.4;
+  word-break: break-word;
 }
 
 .hotline-item-note {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
-  margin-top: 3px;
+  margin-top: 4px;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .hotline-btn-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
@@ -2458,17 +2485,18 @@ html[data-theme="dark"] .leaflet-tile-pane {
   background: #10b981;
   color: #ffffff;
   text-decoration: none;
-  border-radius: 6px;
-  padding: 6px 12px;
+  border-radius: 8px;
+  padding: 8px 12px;
   font-size: 12.5px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 6px;
   white-space: nowrap;
   box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
   transition: transform 0.15s ease, background 0.15s ease;
+  box-sizing: border-box;
 }
 
 .hotline-call-btn:hover {
@@ -2501,5 +2529,36 @@ html[data-theme="dark"] .leaflet-tile-pane {
 
 .hotline-call-btn.line:hover {
   background: #05b04c;
+}
+
+@media (max-width: 640px) {
+  .app-modal.modal-wide {
+    width: calc(100vw - 16px);
+    margin: 8px auto;
+  }
+  .hotline-items-grid {
+    grid-template-columns: 1fr;
+    padding: 8px;
+    gap: 8px;
+  }
+  .hotline-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 10px;
+  }
+  .hotline-btn-group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 6px;
+  }
+  .hotline-call-btn {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 130px;
+    padding: 9px 10px;
+    font-size: 13px;
+    text-align: center;
+  }
 }
 

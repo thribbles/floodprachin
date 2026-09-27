@@ -54,14 +54,11 @@
       <button type="button" class="mobile-tab" id="tab-list-btn" role="tab" aria-selected="false">
         <span>📋</span> รายการ <span id="mobile-badge" class="count-badge">0</span>
       </button>
-      <button type="button" class="mobile-tab" id="tab-reports-btn" role="tab" aria-selected="false">
-        <span>📊</span> สรุปรายงาน
-      </button>
       <button type="button" class="mobile-tab" id="tab-news-btn" role="tab" aria-selected="false">
         <span>📰</span> ข่าวสาร
       </button>
-      <button type="button" class="mobile-tab" id="tab-links-btn" role="tab" aria-selected="false">
-        <span>🔗</span> เมนูเชื่อมโยง
+      <button type="button" class="mobile-tab" id="tab-reports-btn" role="tab" aria-selected="false" hidden>
+        <span>📊</span> สรุปรายงาน
       </button>
     </div>
 
@@ -72,12 +69,7 @@
         <span class="nav-btn-text">ข่าวสาร</span>
       </button>
 
-      <button type="button" id="quick-links-hub-btn" class="header-nav-button" title="ศูนย์รวมเมนูและจุดเชื่อมโยงข้อมูล">
-        <span class="nav-btn-icon">🔗</span>
-        <span class="nav-btn-text">เมนูเชื่อมโยง</span>
-      </button>
-
-      <button type="button" id="reports-dashboard-btn" class="header-nav-button" title="ดูศูนย์รายงานและสถิติภาพรวม">
+      <button type="button" id="reports-dashboard-btn" class="header-nav-button" title="ดูศูนย์รายงานและสถิติภาพรวม (สำหรับเจ้าหน้าที่)" hidden>
         <span class="nav-btn-icon">📊</span>
         <span class="nav-btn-text">รายงานสรุป</span>
       </button>
@@ -349,11 +341,11 @@
           </div>
 
           <div class="input-grid" id="report-extra-grid">
-            <div>
+            <div id="report-contact-wrap">
               <label class="field-label" for="report-contact">เบอร์ติดต่อกลับ <small>(เจ้าหน้าที่โทรประสานงาน)</small></label>
               <input type="tel" id="report-contact" class="text-input" placeholder="0XX-XXX-XXXX" maxlength="20" inputmode="tel">
             </div>
-            <div>
+            <div id="report-people-wrap">
               <label class="field-label" for="report-people">จำนวนผู้ประสบภัย <small>(คน)</small></label>
               <input type="number" id="report-people" class="text-input" min="1" max="999" placeholder="ระบุจำนวนคน">
             </div>
@@ -443,7 +435,7 @@
                 </select>
               </div>
               <div>
-                <label class="field-label" for="admin-status-select">สถานะการช่วยเหลือ</label>
+                <label class="field-label" id="admin-status-label" for="admin-status-select">สถานะการช่วยเหลือ</label>
                 <select id="admin-status-select" class="select-input">
                   <option value="pending">รอความช่วยเหลือ</option>
                   <option value="done">✓ ช่วยเหลือเรียบร้อยแล้ว</option>
@@ -452,7 +444,7 @@
               </div>
             </div>
 
-            <div class="input-grid">
+            <div class="input-grid" id="admin-help-extra-fields">
               <div>
                 <label class="field-label" for="admin-report-people">จำนวนผู้ประสบภัย (คน)</label>
                 <input type="number" id="admin-report-people" class="text-input" min="0" placeholder="เช่น 2">
@@ -854,7 +846,7 @@
           </div>
 
 
-          <div class="quick-nav-tile" role="button" tabindex="0" data-hub-action="reports-dashboard">
+          <div class="quick-nav-tile" id="hub-tile-reports" role="button" tabindex="0" data-hub-action="reports-dashboard" hidden>
             <span class="tile-icon">📊</span>
             <div class="tile-text">
               <strong>ศูนย์รายงาน & สถิติ 7 อำเภอ</strong>
@@ -939,9 +931,9 @@
         <button type="button" id="hotline-modal-close" class="modal-close-btn" style="color: #fff;" aria-label="ปิด">✕</button>
       </div>
 
-      <div style="padding: 12px 16px; background: var(--bg-surface-elevated); border-bottom: 1px solid var(--border-subtle); display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-        <input type="search" id="hotline-search-input" class="text-input" placeholder="🔍 ค้นหาเบอร์โทร, ชื่ออำเภอ, กู้ภัย, รพ., สภ..." style="flex: 1; min-width: 200px; padding: 8px 12px; font-size: 13px; border-radius: 8px;">
-        <div class="hotline-filter-chips" style="display: flex; gap: 6px; overflow-x: auto; width: 100%; padding-top: 4px;">
+      <div style="padding: 12px 16px; background: var(--bg-surface-elevated); border-bottom: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 8px;">
+        <input type="search" id="hotline-search-input" class="text-input" placeholder="🔍 ค้นหาเบอร์โทร, ชื่ออำเภอ, กู้ภัย, รพ., สภ..." style="width: 100%; padding: 9px 12px; font-size: 13px; border-radius: 8px; box-sizing: border-box;">
+        <div class="hotline-filter-chips">
           <button type="button" class="hotline-chip active" data-cat="all">ทั้งหมด</button>
           <button type="button" class="hotline-chip" data-cat="shelter">🏠 ศูนย์พักพิง (24 แห่ง)</button>
           <button type="button" class="hotline-chip" data-cat="main">⚡ สายด่วนหลัก 24 ชม.</button>
