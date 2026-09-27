@@ -423,7 +423,7 @@
         <!-- Quick Call Link if available -->
         <div id="event-call-row" class="event-call-row" hidden>
           <a id="event-phone-link" href="#" class="call-action-btn">
-            <span>📞 โทรติดต่อผู้ประสบภัย: </span>
+            <span id="event-phone-label">📞 โทรติดต่อ: </span>
             <strong id="event-phone-display"></strong>
           </a>
         </div>
@@ -820,6 +820,14 @@
             </div>
             <span class="tile-arrow" style="color: #ef4444; font-size: 18px;">➔</span>
           </div>
+          <div class="quick-nav-tile" role="button" tabindex="0" data-hub-action="shelters" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(59, 130, 246, 0.12) 100%); border-color: rgba(16, 185, 129, 0.5);">
+            <span class="tile-icon">🏠</span>
+            <div class="tile-text">
+              <strong style="color: #10b981; font-size: 15px;">ศูนย์พักพิง อ.ประจันตคาม (24 แห่ง)</strong>
+              <small>บุฝ้าย (8), หนองแก้ว (3), โพธิ์งาม (9), ประจันตคาม (4) พร้อมเบอร์กำนัน/ผู้ใหญ่บ้าน</small>
+            </div>
+            <span class="tile-arrow" style="color: #10b981; font-size: 18px;">➔</span>
+          </div>
         </div>
 
         <!-- Section 1: เมนูหลักและแผนที่ -->
@@ -935,6 +943,7 @@
         <input type="search" id="hotline-search-input" class="text-input" placeholder="🔍 ค้นหาเบอร์โทร, ชื่ออำเภอ, กู้ภัย, รพ., สภ..." style="flex: 1; min-width: 200px; padding: 8px 12px; font-size: 13px; border-radius: 8px;">
         <div class="hotline-filter-chips" style="display: flex; gap: 6px; overflow-x: auto; width: 100%; padding-top: 4px;">
           <button type="button" class="hotline-chip active" data-cat="all">ทั้งหมด</button>
+          <button type="button" class="hotline-chip" data-cat="shelter">🏠 ศูนย์พักพิง (24 แห่ง)</button>
           <button type="button" class="hotline-chip" data-cat="main">⚡ สายด่วนหลัก 24 ชม.</button>
           <button type="button" class="hotline-chip" data-cat="rescue">🚑 หน่วยกู้ภัย</button>
           <button type="button" class="hotline-chip" data-cat="hospital">🏥 โรงพยาบาล</button>

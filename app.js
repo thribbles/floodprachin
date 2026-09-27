@@ -80,9 +80,58 @@ function apply48hTimeout(items) {
   });
 }
 
+// --- 24 Official Shelter Centers (ศูนย์พักพิง อ.ประจันตคาม จ.ปราจีนบุรี) ---
+const PRACHANTAKHAM_SHELTERS = [
+  // 1. ตำบลบุฝ้าย (8 แห่ง)
+  { id: 'shelter-bufai-1', name: 'วัดบุฝ้าย (ศูนย์พักพิง)', subdistrict: 'ตำบลบุฝ้าย', moo: 'ม.1 ต.บุฝ้าย', contactPerson: 'นายสามารถ โพธิ์ทอง', role: 'กำนัน', phone: '081-864-8938', lat: 14.1824, lng: 101.5382 },
+  { id: 'shelter-bufai-2', name: 'วัดใหม่กวางทอง / รอยต่อคำโตนด (ศูนย์พักพิง)', subdistrict: 'ตำบลบุฝ้าย', moo: 'ม.16 ต.คำโตนด', contactPerson: 'นางสาวสุพัตรา แสงสุข', role: 'ผู้ใหญ่บ้าน', phone: '097-148-6695', lat: 14.1952, lng: 101.5251 },
+  { id: 'shelter-bufai-3', name: 'วัดตะคร้อ (ศูนย์พักพิง)', subdistrict: 'ตำบลบุฝ้าย', moo: 'ม.8 ต.บุฝ้าย', contactPerson: 'นายประสิทธิ์ เจนดง', role: 'ผู้ใหญ่บ้าน', phone: '086-143-2472', lat: 14.1785, lng: 101.5453 },
+  { id: 'shelter-bufai-4', name: 'วัดบ้านว่าน (ศูนย์พักพิง)', subdistrict: 'ตำบลบุฝ้าย', moo: 'ม.6 ต.บุฝ้าย', contactPerson: 'นายสุพรชัย ชตางาม', role: 'ผู้ใหญ่บ้าน', phone: '086-159-0254', lat: 14.1721, lng: 101.5402 },
+  { id: 'shelter-bufai-5', name: 'รพ.สต.บุฝ้าย (ศูนย์พักพิง)', subdistrict: 'ตำบลบุฝ้าย', moo: 'ม.10 ต.บุฝ้าย', contactPerson: 'นางสาวชญาภา บัวนครบุรี', role: 'ผู้ใหญ่บ้าน', phone: '096-885-8291', lat: 14.1802, lng: 101.5365 },
+  { id: 'shelter-bufai-6', name: 'วัดขิงกระจาย (ศูนย์พักพิง)', subdistrict: 'ตำบลบุฝ้าย', moo: 'ม.13 ต.บุฝ้าย', contactPerson: 'นายอาทร หัสดิ', role: 'ผู้ใหญ่บ้าน', phone: '089-833-5894', lat: 14.1856, lng: 101.5501 },
+  { id: 'shelter-bufai-7', name: 'อบต.บุฝ้าย (ศูนย์พักพิง)', subdistrict: 'ตำบลบุฝ้าย', moo: 'ม.5 ต.บุฝ้าย', contactPerson: 'นายอรรถพล คำวิชัย', role: 'ผู้ใหญ่บ้าน', phone: '063-156-9127', lat: 14.1753, lng: 101.5348 },
+  { id: 'shelter-bufai-8', name: 'วัดพลับใหม่ (ศูนย์พักพิง)', subdistrict: 'ตำบลบุฝ้าย', moo: 'ม.11 ต.บุฝ้าย', contactPerson: 'นายพงษ์พันธุ์ ศรีก่ำ', role: 'ผู้ใหญ่บ้าน', phone: '094-974-1978', lat: 14.1684, lng: 101.5427 },
+
+  // 2. ตำบลหนองแก้ว (3 แห่ง)
+  { id: 'shelter-nongkaew-1', name: 'วัดโคกเขื่อน (ศูนย์พักพิง)', subdistrict: 'ตำบลหนองแก้ว', moo: 'ม.12 ต.หนองแก้ว', contactPerson: 'นายสมชาย จารัญ', role: 'ผู้ใหญ่บ้าน', phone: '086-414-0927', lat: 14.1354, lng: 101.5902 },
+  { id: 'shelter-nongkaew-2', name: 'วัดหนองแก้ว (ศูนย์พักพิง)', subdistrict: 'ตำบลหนองแก้ว', moo: 'ม.2 ต.หนองแก้ว', contactPerson: 'นายพงศ์ศิริ เบ้าเจริญ', role: 'ผู้ใหญ่บ้าน', phone: '080-631-8262', lat: 14.1281, lng: 101.5824 },
+  { id: 'shelter-nongkaew-3', name: 'ศาลากลางบ้านเกาะยายหนัก (ศูนย์พักพิง)', subdistrict: 'ตำบลหนองแก้ว', moo: 'ม.3 ต.หนองแก้ว', contactPerson: 'นายธงชัย เชิงเขา', role: 'กำนัน', phone: '089-252-6727', lat: 14.1312, lng: 101.5753 },
+
+  // 3. ตำบลโพธิ์งาม (9 แห่ง)
+  { id: 'shelter-phongam-1', name: 'วัดเขาน้อย (ศูนย์พักพิง)', subdistrict: 'ตำบลโพธิ์งาม', moo: 'ม.13 ต.โพธิ์งาม', contactPerson: 'นายสนธยา นาดี', role: 'ผู้ใหญ่บ้าน', phone: '084-349-3145', lat: 14.1623, lng: 101.5054 },
+  { id: 'shelter-phongam-2', name: 'วัดโคกกรวด (ศูนย์พักพิง)', subdistrict: 'ตำบลโพธิ์งาม', moo: 'ม.7 ต.โพธิ์งาม', contactPerson: 'นายเผชิญ โพธิ์งาม', role: 'ผู้ใหญ่บ้าน', phone: '092-469-7194', lat: 14.1552, lng: 101.5126 },
+  { id: 'shelter-phongam-3', name: 'วัดโคกบ้าน (ศูนย์พักพิง)', subdistrict: 'ตำบลโพธิ์งาม', moo: 'ม.12 ต.โพธิ์งาม', contactPerson: 'นางสาวนภาพร แสงสุทากทจำนง', role: 'ผู้ใหญ่บ้าน', phone: '081-150-5757', lat: 14.1501, lng: 101.5183 },
+  { id: 'shelter-phongam-4', name: 'วัดอินทร์ไตรย์ (ศูนย์พักพิง)', subdistrict: 'ตำบลโพธิ์งาม', moo: 'ม.6 ต.โพธิ์งาม', contactPerson: 'นายวิษณุ ทรัพย์ศรี', role: 'ผู้ใหญ่บ้าน', phone: '094-950-5242', lat: 14.1456, lng: 101.5152 },
+  { id: 'shelter-phongam-5', name: 'ศาลาอเนกประสงค์บ้านยาง (ศูนย์พักพิง)', subdistrict: 'ตำบลโพธิ์งาม', moo: 'ม.17 ต.โพธิ์งาม', contactPerson: 'นายไพศาล ต่างแขวง', role: 'ผู้ใหญ่บ้าน', phone: '089-244-6868', lat: 14.1485, lng: 101.5221 },
+  { id: 'shelter-phongam-6', name: 'วัดบ้านโง้ง (ศูนย์พักพิง)', subdistrict: 'ตำบลโพธิ์งาม', moo: 'ม.2 ต.โพธิ์งาม', contactPerson: 'นายทิตคุณ สมจิตร', role: 'ผู้ใหญ่บ้าน', phone: '098-302-9413', lat: 14.1402, lng: 101.5105 },
+  { id: 'shelter-phongam-7', name: 'ศาลาอเนกประสงค์บ้านประเฑศ (ศูนย์พักพิง)', subdistrict: 'ตำบลโพธิ์งาม', moo: 'ม.11 ต.โพธิ์งาม', contactPerson: 'นายวินัย ปัญญาดี', role: 'ผู้ใหญ่บ้าน', phone: '086-152-7404', lat: 14.1524, lng: 101.5284 },
+  { id: 'shelter-phongam-8', name: 'ศาลาประชาคมบ้านคลองฟันปลา (ศูนย์พักพิง)', subdistrict: 'ตำบลโพธิ์งาม', moo: 'ม.14 ต.โพธิ์งาม', contactPerson: 'นางสาววรรณลักษณ์ สาระบุตร', role: 'ผู้ใหญ่บ้าน', phone: '081-377-5623', lat: 14.1582, lng: 101.5204 },
+  { id: 'shelter-phongam-9', name: 'ศาลาประชาคมบ้านเกาะยาง (ศูนย์พักพิง)', subdistrict: 'ตำบลโพธิ์งาม', moo: 'ม.9 ต.โพธิ์งาม', contactPerson: 'นางสาวอังคณา หมื่นหาญ', role: 'ผู้ใหญ่บ้าน', phone: '081-489-2695', lat: 14.1432, lng: 101.5256 },
+
+  // 4. ตำบลประจันตคาม (4 แห่ง)
+  { id: 'shelter-prachantakham-1', name: 'วัดดงไชยมัน (ศูนย์พักพิง)', subdistrict: 'ตำบลประจันตคาม', moo: 'ม.7 ต.ประจันตคาม', contactPerson: 'นางสาวสายทอง บุดดี', role: 'ผู้ใหญ่บ้าน', phone: '092-449-4022', lat: 14.1152, lng: 101.5354 },
+  { id: 'shelter-prachantakham-2', name: 'วัดบ้านไผ่ (ศูนย์พักพิง)', subdistrict: 'ตำบลประจันตคาม', moo: 'ม.8 ต.ประจันตคาม', contactPerson: 'นางเกศิณี ปุรา', role: 'ผู้ใหญ่บ้าน', phone: '086-159-3348', lat: 14.1084, lng: 101.5402 },
+  { id: 'shelter-prachantakham-3', name: 'เกาะกระพี้ (ศูนย์พักพิง)', subdistrict: 'ตำบลประจันตคาม', moo: 'ม.3 ต.ประจันตคาม', contactPerson: 'นายประมวล เอี่ยมอ่อง', role: 'ผู้ใหญ่บ้าน', phone: '092-632-9994', lat: 14.1021, lng: 101.5283 },
+  { id: 'shelter-prachantakham-4', name: 'โดมอเนกประสงค์วัดแจ้งเมืองเก่า (ศูนย์พักพิง)', subdistrict: 'ตำบลประจันตคาม', moo: 'ม.2 ต.ประจันตคาม', contactPerson: 'น.ส.รัตนาภรณ์ สัตยา', role: 'สารวัตรกำนัน', phone: '092-531-9924', lat: 14.1126, lng: 101.5251 }
+];
+
+const DEFAULT_OFFICIAL_SHELTERS = PRACHANTAKHAM_SHELTERS.map(s => ({
+  id: s.id,
+  name: s.name,
+  category: 'shelter',
+  description: `ศูนย์พักพิงน้ำท่วม (${s.subdistrict} ${s.moo}) อ.ประจันตคาม\nผู้รับผิดชอบ: ${s.contactPerson} (${s.role})\nโทร: ${s.phone}`,
+  lat: s.lat,
+  lng: s.lng,
+  status: 'available',
+  contact: s.phone,
+  phone: s.phone,
+  createdAt: '2026-09-27T08:00:00.000Z',
+  isOfficial: true
+}));
+
 // --- State Variables ---
 let reports = loadLocalReports();
-let assistancePoints = [];
+let assistancePoints = [...DEFAULT_OFFICIAL_SHELTERS];
 let currentFilter = 'all'; // 'all' | 'help' | 'flood' | 'done' | 'assistance'
 let provinceGeometry = null;
 let syncing = false;
@@ -195,6 +244,9 @@ function createMarkerIcon(item, kind) {
     } else if (isSandbagPoint(item)) {
       colorClass = 'sandbag'; // จุดรับกระสอบทราย = สีเหลือง
       iconEmoji = '🟡';
+    } else if (item.category === 'shelter' || item.name?.includes('ศูนย์พักพิง')) {
+      colorClass = 'support'; // ศูนย์พักพิง = สีเขียว
+      iconEmoji = '🏠';
     } else {
       colorClass = 'support'; // จุดช่วยเหลือ = สีเขียว
       iconEmoji = '⌂';
@@ -547,7 +599,7 @@ function render() {
         }
 
         const accentColor = isClosedPoint ? '#475569' : isSandbag ? '#f59e0b' : '#42b883';
-        const iconChar = isClosedPoint ? '⚫' : isSandbag ? '🟡' : '⌂';
+        const iconChar = isClosedPoint ? '⚫' : isSandbag ? '🟡' : (point.category === 'shelter' || point.name?.includes('ศูนย์พักพิง') ? '🏠' : '⌂');
         const statusText = isClosedPoint
           ? '⚫ ปิดบริการแล้ว'
           : isSandbag
@@ -578,7 +630,7 @@ function render() {
       card.setAttribute('role', 'button');
       card.tabIndex = 0;
 
-      const iconChar = isClosedPoint ? '⚫' : isSandbag ? '🟡' : '⌂';
+      const iconChar = isClosedPoint ? '⚫' : isSandbag ? '🟡' : (point.category === 'shelter' || point.name?.includes('ศูนย์พักพิง') ? '🏠' : '⌂');
       let thumbHtml = '';
       if (point.attachmentPath) {
         thumbHtml = getMediaThumbHtml(point.attachmentPath, point.createdAt);
@@ -675,6 +727,8 @@ function openEventDialog(item, kind) {
       ${item.helpedBy ? `<div>🤝 ผู้ให้ความช่วยเหลือ: <strong>${escapeHtml(item.helpedBy)}</strong></div>` : ''}
     `;
 
+    const phoneLabel = document.getElementById('event-phone-label');
+    if (phoneLabel) phoneLabel.textContent = '📞 โทรติดต่อผู้ประสบภัย: ';
     if (item.contact) {
       callRow.hidden = false;
       document.getElementById('event-phone-link').href = `tel:${item.contact.replace(/[^+\d]/g, '')}`;
@@ -722,7 +776,16 @@ function openEventDialog(item, kind) {
       <div>📍 พิกัด: ${Number(item.lat).toFixed(5)}, ${Number(item.lng).toFixed(5)}</div>
     `;
 
-    callRow.hidden = true;
+    const phoneLabel = document.getElementById('event-phone-label');
+    if (phoneLabel) phoneLabel.textContent = '📞 โทรติดต่อผู้ดูแล / ศูนย์พักพิง: ';
+    const phoneMatch = item.contact || item.phone || (item.description && item.description.match(/(0[689]\d[-–]?\d{3}[-–]?\d{4}|0\d{1,2}[-–]?\d{3}[-–]?\d{4})/)?.[0]);
+    if (phoneMatch) {
+      callRow.hidden = false;
+      document.getElementById('event-phone-link').href = `tel:${phoneMatch.replace(/[^+\d]/g, '')}`;
+      document.getElementById('event-phone-display').textContent = phoneMatch;
+    } else {
+      callRow.hidden = true;
+    }
 
     const canEdit = canUpdateAssistancePoint(item);
     adminSection.hidden = !canEdit;
@@ -1583,13 +1646,26 @@ async function syncReports() {
 }
 
 async function syncAssistancePoints() {
-  if (!database) return;
   try {
-    assistancePoints = await listAssistancePoints();
-    apply48hTimeout(assistancePoints);
+    let cloudPoints = [];
+    if (database) {
+      cloudPoints = await listAssistancePoints();
+      apply48hTimeout(cloudPoints);
+    }
+    // Merge cloud points with official shelters if not already in cloud (match by name)
+    const cloudNames = new Set(cloudPoints.map(p => (p.name || '').trim().toLowerCase().replace(/[\s()]/g, '')));
+    const missingShelters = DEFAULT_OFFICIAL_SHELTERS.filter(s => {
+      const cleanS = s.name.trim().toLowerCase().replace(/[\s()]/g, '');
+      return !cloudNames.has(cleanS);
+    });
+    assistancePoints = [...cloudPoints, ...missingShelters];
     render();
   } catch (err) {
     console.error('Sync assistance points failed', err);
+    if (!assistancePoints.length) {
+      assistancePoints = [...DEFAULT_OFFICIAL_SHELTERS];
+      render();
+    }
   }
 }
 
@@ -1945,6 +2021,12 @@ document.querySelectorAll('[data-hub-action]').forEach(tile => {
 
     switch (action) {
       case 'hotlines':
+        openHotlineModal();
+        break;
+
+      case 'shelters':
+        activeHotlineCategory = 'shelter';
+        document.querySelectorAll('.hotline-chip').forEach(c => c.classList.toggle('active', c.dataset.cat === 'shelter'));
         openHotlineModal();
         break;
 
@@ -2423,6 +2505,63 @@ document.getElementById('brand-logo-btn')?.addEventListener('click', (e) => {
 const hotlineModal = document.getElementById('hotline-modal');
 
 const HOTLINE_DATA = [
+  // --- ศูนย์พักพิง อ.ประจันตคาม 4 ตำบล 24 แห่ง ---
+  {
+    category: 'shelter',
+    title: '🏠 ศูนย์พักพิงผู้อพยพ อ.ประจันตคาม • ต.บุฝ้าย (8 แห่ง)',
+    badge: 'บุฝ้าย 8 แห่ง',
+    badgeClass: 'support',
+    items: [
+      { name: '1. วัดบุฝ้าย (ม.1 ต.บุฝ้าย)', phone: '081-864-8938', note: 'ผู้รับผิดชอบ: นายสามารถ โพธิ์ทอง (กำนัน)' },
+      { name: '2. วัดใหม่กวางทอง / รอยต่อคำโตนด (ม.16 ต.คำโตนด)', phone: '097-148-6695', note: 'ผู้รับผิดชอบ: นางสาวสุพัตรา แสงสุข (ผู้ใหญ่บ้าน)' },
+      { name: '3. วัดตะคร้อ (ม.8 ต.บุฝ้าย)', phone: '086-143-2472', note: 'ผู้รับผิดชอบ: นายประสิทธิ์ เจนดง (ผู้ใหญ่บ้าน)' },
+      { name: '4. วัดบ้านว่าน (ม.6 ต.บุฝ้าย)', phone: '086-159-0254', note: 'ผู้รับผิดชอบ: นายสุพรชัย ชตางาม (ผู้ใหญ่บ้าน)' },
+      { name: '5. รพ.สต.บุฝ้าย (ม.10 ต.บุฝ้าย)', phone: '096-885-8291', note: 'ผู้รับผิดชอบ: นางสาวชญาภา บัวนครบุรี (ผู้ใหญ่บ้าน)' },
+      { name: '6. วัดขิงกระจาย (ม.13 ต.บุฝ้าย)', phone: '089-833-5894', note: 'ผู้รับผิดชอบ: นายอาทร หัสดิ (ผู้ใหญ่บ้าน)' },
+      { name: '7. อบต.บุฝ้าย (ม.5 ต.บุฝ้าย)', phone: '063-156-9127', note: 'ผู้รับผิดชอบ: นายอรรถพล คำวิชัย (ผู้ใหญ่บ้าน)' },
+      { name: '8. วัดพลับใหม่ (ม.11 ต.บุฝ้าย)', phone: '094-974-1978', note: 'ผู้รับผิดชอบ: นายพงษ์พันธุ์ ศรีก่ำ (ผู้ใหญ่บ้าน)' }
+    ]
+  },
+  {
+    category: 'shelter',
+    title: '🏠 ศูนย์พักพิงผู้อพยพ อ.ประจันตคาม • ต.หนองแก้ว (3 แห่ง)',
+    badge: 'หนองแก้ว 3 แห่ง',
+    badgeClass: 'support',
+    items: [
+      { name: '1. วัดโคกเขื่อน (ม.12 ต.หนองแก้ว)', phone: '086-414-0927', note: 'ผู้รับผิดชอบ: นายสมชาย จารัญ (ผู้ใหญ่บ้าน)' },
+      { name: '2. วัดหนองแก้ว (ม.2 ต.หนองแก้ว)', phone: '080-631-8262', note: 'ผู้รับผิดชอบ: นายพงศ์ศิริ เบ้าเจริญ (ผู้ใหญ่บ้าน)' },
+      { name: '3. ศาลากลางบ้านเกาะยายหนัก (ม.3 ต.หนองแก้ว)', phone: '089-252-6727', note: 'ผู้รับผิดชอบ: นายธงชัย เชิงเขา (กำนัน)' }
+    ]
+  },
+  {
+    category: 'shelter',
+    title: '🏠 ศูนย์พักพิงผู้อพยพ อ.ประจันตคาม • ต.โพธิ์งาม (9 แห่ง)',
+    badge: 'โพธิ์งาม 9 แห่ง',
+    badgeClass: 'support',
+    items: [
+      { name: '1. วัดเขาน้อย (ม.13 ต.โพธิ์งาม)', phone: '084-349-3145', note: 'ผู้รับผิดชอบ: นายสนธยา นาดี (ผู้ใหญ่บ้าน)' },
+      { name: '2. วัดโคกกรวด (ม.7 ต.โพธิ์งาม)', phone: '092-469-7194', note: 'ผู้รับผิดชอบ: นายเผชิญ โพธิ์งาม (ผู้ใหญ่บ้าน)' },
+      { name: '3. วัดโคกบ้าน (ม.12 ต.โพธิ์งาม)', phone: '081-150-5757', note: 'ผู้รับผิดชอบ: นางสาวนภาพร แสงสุทากทจำนง (ผู้ใหญ่บ้าน)' },
+      { name: '4. วัดอินทร์ไตรย์ (ม.6 ต.โพธิ์งาม)', phone: '094-950-5242', note: 'ผู้รับผิดชอบ: นายวิษณุ ทรัพย์ศรี (ผู้ใหญ่บ้าน)' },
+      { name: '5. ศาลาอเนกประสงค์บ้านยาง (ม.17 ต.โพธิ์งาม)', phone: '089-244-6868', note: 'ผู้รับผิดชอบ: นายไพศาล ต่างแขวง (ผู้ใหญ่บ้าน)' },
+      { name: '6. วัดบ้านโง้ง (ม.2 ต.โพธิ์งาม)', phone: '098-302-9413', note: 'ผู้รับผิดชอบ: นายทิตคุณ สมจิตร (ผู้ใหญ่บ้าน)' },
+      { name: '7. ศาลาอเนกประสงค์บ้านประเฑศ (ม.11 ต.โพธิ์งาม)', phone: '086-152-7404', note: 'ผู้รับผิดชอบ: นายวินัย ปัญญาดี (ผู้ใหญ่บ้าน)' },
+      { name: '8. ศาลาประชาคมบ้านคลองฟันปลา (ม.14 ต.โพธิ์งาม)', phone: '081-377-5623', note: 'ผู้รับผิดชอบ: นางสาววรรณลักษณ์ สาระบุตร (ผู้ใหญ่บ้าน)' },
+      { name: '9. ศาลาประชาคมบ้านเกาะยาง (ม.9 ต.โพธิ์งาม)', phone: '081-489-2695', note: 'ผู้รับผิดชอบ: นางสาวอังคณา หมื่นหาญ (ผู้ใหญ่บ้าน)' }
+    ]
+  },
+  {
+    category: 'shelter',
+    title: '🏠 ศูนย์พักพิงผู้อพยพ อ.ประจันตคาม • ต.ประจันตคาม (4 แห่ง)',
+    badge: 'ประจันตคาม 4 แห่ง',
+    badgeClass: 'support',
+    items: [
+      { name: '1. วัดดงไชยมัน (ม.7 ต.ประจันตคาม)', phone: '092-449-4022', note: 'ผู้รับผิดชอบ: นางสาวสายทอง บุดดี (ผู้ใหญ่บ้าน)' },
+      { name: '2. วัดบ้านไผ่ (ม.8 ต.ประจันตคาม)', phone: '086-159-3348', note: 'ผู้รับผิดชอบ: นางเกศิณี ปุรา (ผู้ใหญ่บ้าน)' },
+      { name: '3. เกาะกระพี้ (ม.3 ต.ประจันตคาม)', phone: '092-632-9994', note: 'ผู้รับผิดชอบ: นายประมวล เอี่ยมอ่อง (ผู้ใหญ่บ้าน)' },
+      { name: '4. โดมอเนกประสงค์วัดแจ้งเมืองเก่า (ม.2 ต.ประจันตคาม)', phone: '092-531-9924', note: 'ผู้รับผิดชอบ: น.ส.รัตนาภรณ์ สัตยา (สารวัตรกำนัน)' }
+    ]
+  },
   {
     category: 'main',
     title: '⚡ สายด่วนหลัก • โทรฟรี 24 ชั่วโมง / ใช้ได้ทุกอำเภอ',
