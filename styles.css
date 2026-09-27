@@ -1132,6 +1132,53 @@ html[data-theme="dark"] .leaflet-tile-pane {
 }
 
 /* ==========================================================================
+   Mobile Marker Mode: Minimal colored dots (คลีน ดูง่าย ไม่บังกัน)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .marker-ring-pulse {
+    display: none !important;
+  }
+
+  .custom-radar-marker {
+    display: grid !important;
+    place-items: center !important;
+  }
+
+  .marker-ring {
+    width: 13px !important;
+    height: 13px !important;
+    min-width: 13px !important;
+    min-height: 13px !important;
+    border: 2px solid #ffffff !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5) !important;
+    position: relative;
+  }
+
+  /* ขยายพื้นที่แตะบนหน้าจอมือถือให้จิ้มง่าย (Hit area 34x34px) */
+  .marker-ring::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: transparent;
+  }
+
+  .marker-ring:active {
+    transform: scale(1.35) !important;
+  }
+
+  .marker-inner-icon,
+  .marker-avatar-thumb {
+    display: none !important;
+  }
+}
+
+
+/* ==========================================================================
    App Modals / Dialogs
    ========================================================================== */
 .app-modal {
