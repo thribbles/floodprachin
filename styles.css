@@ -1728,43 +1728,82 @@ html[data-theme="dark"] .leaflet-tile-pane {
 
 @media (max-width: 768px) {
   .topbar {
-    padding: 0 12px;
+    height: auto;
+    min-height: 56px;
+    padding: 8px 12px 6px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .brand-group {
+    order: 1;
+  }
+
+  .header-tools {
+    order: 2;
+    gap: 6px;
+  }
+
+  /* ซ่อนปุ่มของ Desktop ในแถบบน เพื่อไม่ให้ดันแถบเมนูในมือถือจนล้น */
+  .header-nav-button,
+  .clock-badge,
+  .weather-pill,
+  .live-status {
+    display: none !important;
   }
 
   .brand-text h1 {
-    font-size: 14px;
+    font-size: 15px;
   }
 
-  .live-status {
-    display: none;
+  .staff-toggle-button {
+    padding: 5px 10px;
+    font-size: 11.5px;
   }
 
-  .weather-pill {
-    display: none;
-  }
-
-  /* Mobile Tabs appear in topbar */
+  /* แถบเมนู Mobile Tabs แสดงเต็มความกว้างแถวที่ 2 ครบทุกเมนู 100% */
   .mobile-tabs {
+    order: 3;
+    width: 100%;
     display: flex;
+    align-items: center;
+    justify-content: space-between;
     background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
     border-radius: 8px;
-    padding: 2px;
+    padding: 3px;
     gap: 2px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .mobile-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .mobile-tab {
+    flex: 1 1 0;
+    min-width: 0;
     background: none;
     border: none;
     color: var(--text-muted);
     font-family: var(--font-thai);
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 600;
-    padding: 5px 10px;
+    padding: 6px 4px;
     border-radius: 6px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 3px;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .mobile-tab span {
+    font-size: 12px;
   }
 
   .mobile-tab.active {

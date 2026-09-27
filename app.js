@@ -2401,3 +2401,10 @@ document.getElementById('news-modal-close')?.addEventListener('click', () => {
   newsModal?.close();
 });
 
+// Brand Logo Click to Refresh Website
+document.getElementById('brand-logo-btn')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  window.location.reload();
+});
+
+
